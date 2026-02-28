@@ -95,6 +95,7 @@ require_once __DIR__ . '/../includes/navbar.php';
 
         <form method="POST" action="#">
 
+          <!-- Row 1: First Name + Last Name -->
           <div class="form-row">
             <div class="form-group">
               <label for="reg-fname">First Name</label>
@@ -106,21 +107,56 @@ require_once __DIR__ . '/../includes/navbar.php';
             </div>
           </div>
 
+          <!-- Middle Name -->
+          <div class="form-group">
+            <label for="reg-mname">Middle Name</label>
+            <input type="text" id="reg-mname" name="middle_name" placeholder="Santos (leave blank if none)" />
+          </div>
+
+          <!-- University ID -->
           <div class="form-group">
             <label for="reg-id">University ID Number</label>
             <input type="text" id="reg-id" name="student_id" placeholder="e.g. 22-12345" required />
           </div>
 
-          <div class="form-group">
-            <label for="reg-email">University Email</label>
-            <input type="email" id="reg-email" name="email" placeholder="you@uc.edu.ph" required />
+          <!-- Row 2: Course + Course Level -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-course">Course / Program</label>
+              <input type="text" id="reg-course" name="course" placeholder="e.g. BSIT, BSCS, ACT" required />
+            </div>
+            <div class="form-group">
+              <label for="reg-level">Course Level</label>
+              <select id="reg-level" name="course_level" required>
+                <option value="" disabled selected>Select year</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+                <option value="5">5th Year</option>
+              </select>
+            </div>
           </div>
 
+          <!-- Email -->
           <div class="form-group">
-            <label for="reg-course">Course / Program</label>
-            <input type="text" id="reg-course" name="course" placeholder="e.g. BSIT, BSCS, ACT" required />
+            <label for="reg-email">Email Address</label>
+            <input type="email" id="reg-email" name="email" placeholder="e.g. juandelacruz@gmail.com" required />
           </div>
 
+          <!-- Address -->
+          <div class="form-group">
+            <label for="reg-address">Address</label>
+            <input
+              type="text"
+              id="reg-address"
+              name="address"
+              placeholder="House No., Street, Barangay, City/Municipality"
+              required
+            />
+          </div>
+
+          <!-- Password -->
           <div class="form-group">
             <label for="reg-pass">Password</label>
             <div class="input-wrapper">
@@ -136,6 +172,7 @@ require_once __DIR__ . '/../includes/navbar.php';
             </div>
           </div>
 
+          <!-- Confirm Password -->
           <div class="form-group">
             <label for="reg-confirm">Confirm Password</label>
             <div class="input-wrapper">
@@ -183,12 +220,12 @@ require_once __DIR__ . '/../includes/navbar.php';
         <form method="POST" action="#">
 
           <div class="form-group">
-            <label for="forgot-email">University Email</label>
+            <label for="forgot-email">Email Address</label>
             <input
               type="email"
               id="forgot-email"
               name="email"
-              placeholder="you@uc.edu.ph"
+              placeholder="e.g. juandelacruz@gmail.com"
               required
             />
           </div>

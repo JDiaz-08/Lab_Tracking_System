@@ -7,7 +7,9 @@ if (!isset($base)) $base = '';
     <div class="footer-top">
 
       <div class="footer-logo">
-        <img src="<?= $base ?>assets/images/uc-logo.png" alt="University of Cebu" class="nav-uc-logo footer-uc-logo" />
+        <!-- Use the white-version logo so the CSS filter produces a clean
+             white silhouette against the dark footer background -->
+        <img src="<?= $base ?>assets/images/uc-logo-white.png" alt="University of Cebu" class="nav-uc-logo footer-uc-logo" />
         <div class="logo-text">
           <span class="org-name">University of Cebu</span>
           <span class="org-sub">Computer Laboratory System</span>

@@ -71,10 +71,6 @@ ul { list-style: none; }
   justify-content: space-between;
 }
 
-/* ===========================
-   FIX: .nav-logo needs flex so
-   logo image + text sit side-by-side
-   =========================== */
 .nav-logo {
   display: flex;
   align-items: center;
@@ -82,19 +78,32 @@ ul { list-style: none; }
   text-decoration: none;
 }
 
-/* Logo Images */
+/* ===========================
+   LOGO IMAGES
+   nav-uc-logo: rendered pure white via filter — clean, no muddy
+   edges regardless of source image format or background.
+   footer-uc-logo: same treatment for the dark footer strip.
+   =========================== */
 .nav-uc-logo {
   height: 46px;
   width: auto;
   object-fit: contain;
-  /* no filter needed — uc-logo-white.png is pre-rendered white */
   flex-shrink: 0;
+  /* Convert to a clean white silhouette — eliminates any residual
+     background colour and gives a crisp result on dark navbar */
+  filter: brightness(0) invert(1);
+  /* Subtle opacity so it feels softer rather than stark white */
+  opacity: 0.92;
 }
 
 .footer-uc-logo {
   height: 40px;
-  /* Slightly dimmed in footer context */
-  filter: none; /* colored logo with transparent bg looks great in footer */
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  /* Same white-silhouette treatment for the dark footer */
+  filter: brightness(0) invert(1);
+  opacity: 0.80;
 }
 
 .ccs-real-logo {
@@ -850,7 +859,6 @@ ul { list-style: none; }
   gap: 1rem;
 }
 
-/* FIX: footer-logo needs flex to show image + text side by side */
 .footer-logo {
   display: flex;
   align-items: center;
