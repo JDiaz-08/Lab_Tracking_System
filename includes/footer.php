@@ -1,11 +1,12 @@
 <?php
-$base = (strpos(str_replace('\\', '/', __DIR__), '/pages') !== false) ? '../' : '';
+// Do NOT override $base if the calling page already set it.
+if (!isset($base)) $base = '';
 ?>
 <footer class="footer">
   <div class="footer-container">
     <div class="footer-top">
 
-      <div class="footer-logo nav-logo">
+      <div class="footer-logo">
         <img src="<?= $base ?>assets/images/uc-logo.png" alt="University of Cebu" class="nav-uc-logo footer-uc-logo" />
         <div class="logo-text">
           <span class="org-name">University of Cebu</span>
@@ -26,6 +27,7 @@ $base = (strpos(str_replace('\\', '/', __DIR__), '/pages') !== false) ? '../' : 
   </div>
 </footer>
 
-<script src="<?= $base ?>assets/js/main.js"></script>
+<!-- Fix: filename is Main.js (capital M) — must match exactly on Linux servers -->
+<script src="<?= $base ?>assets/js/Main.js"></script>
 </body>
 </html>

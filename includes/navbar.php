@@ -1,5 +1,8 @@
 <?php
-$base = (strpos(str_replace('\\', '/', __DIR__), '/pages') !== false) ? '../' : '';
+// Do NOT override $base if the calling page already set it.
+// (navbar.php lives in includes/, so __DIR__ never contains '/pages',
+//  making the old strpos check always return '' regardless of caller.)
+if (!isset($base)) $base = '';
 ?>
 <nav class="navbar">
   <div class="nav-container">

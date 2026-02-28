@@ -71,17 +71,29 @@ ul { list-style: none; }
   justify-content: space-between;
 }
 
+/* ===========================
+   FIX: .nav-logo needs flex so
+   logo image + text sit side-by-side
+   =========================== */
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
 /* Logo Images */
 .nav-uc-logo {
   height: 46px;
   width: auto;
   object-fit: contain;
-  filter: brightness(0) invert(1); /* makes it white on dark navbar */
+  filter: brightness(0) invert(1);
   flex-shrink: 0;
 }
 
 .footer-uc-logo {
   height: 40px;
+  /* Slightly dimmed in footer context */
   filter: brightness(0) invert(0.75);
 }
 
@@ -92,8 +104,6 @@ ul { list-style: none; }
   margin-bottom: 0.75rem;
   filter: drop-shadow(0 4px 16px rgba(73,136,196,0.35));
 }
-
-
 
 .logo-badge {
   width: 46px;
@@ -180,6 +190,8 @@ ul { list-style: none; }
   gap: 5px;
   cursor: pointer;
   padding: 5px;
+  background: none;
+  border: none;
 }
 .hamburger span {
   width: 24px;
@@ -232,7 +244,6 @@ ul { list-style: none; }
   padding: 110px 0 60px;
 }
 
-/* Background decorative shapes */
 .hero::before {
   content: '';
   position: absolute;
@@ -253,12 +264,10 @@ ul { list-style: none; }
   pointer-events: none;
 }
 
-/* Grid dots pattern */
 .hero-grid {
   position: absolute;
   inset: 0;
-  background-image:
-    radial-gradient(rgba(189,232,245,0.15) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(189,232,245,0.15) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
 }
@@ -275,7 +284,6 @@ ul { list-style: none; }
   z-index: 1;
 }
 
-/* Hero Content */
 .hero-badge {
   display: inline-flex;
   align-items: center;
@@ -452,7 +460,6 @@ ul { list-style: none; }
   letter-spacing: 0.3px;
 }
 
-/* Session List */
 .session-list { display: flex; flex-direction: column; gap: 0.6rem; }
 
 .session-item {
@@ -477,7 +484,6 @@ ul { list-style: none; }
 .session-name { flex: 1; color: rgba(255,255,255,0.85); font-weight: 500; }
 .session-time { color: rgba(189,232,245,0.65); font-size: 0.75rem; }
 
-/* Floating mini card */
 .mini-card {
   position: absolute;
   bottom: -24px; left: -28px;
@@ -571,7 +577,6 @@ ul { list-style: none; }
   font-weight: 300;
 }
 
-/* Feature Grid */
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -845,6 +850,7 @@ ul { list-style: none; }
   gap: 1rem;
 }
 
+/* FIX: footer-logo needs flex to show image + text side by side */
 .footer-logo {
   display: flex;
   align-items: center;
@@ -1019,7 +1025,6 @@ ul { list-style: none; }
   z-index: 1;
 }
 
-/* Auth Left Panel */
 .auth-left {
   background: var(--navy);
   padding: 3.5rem 3rem;
@@ -1049,10 +1054,7 @@ ul { list-style: none; }
   z-index: 1;
 }
 
-/* Remove old text badge, replaced by real image */
-.ccs-badge {
-  display: none;
-}
+.ccs-badge { display: none; }
 
 .ccs-label {
   font-size: 0.75rem;
@@ -1082,7 +1084,6 @@ ul { list-style: none; }
   z-index: 1;
 }
 
-/* Auth Right Panel */
 .auth-right {
   background: var(--white);
   padding: 3rem 2.75rem;
@@ -1121,7 +1122,6 @@ ul { list-style: none; }
   box-shadow: var(--shadow-sm);
 }
 
-/* Auth Forms */
 .auth-panel { display: none; }
 .auth-panel.active { display: block; }
 
@@ -1152,7 +1152,8 @@ ul { list-style: none; }
   letter-spacing: 0.2px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 1.5px solid #E2E8F0;
@@ -1163,9 +1164,11 @@ ul { list-style: none; }
   background: var(--white);
   transition: var(--transition);
   outline: none;
+  appearance: none;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-color: var(--mid);
   box-shadow: 0 0 0 3px rgba(73,136,196,0.12);
 }
@@ -1261,7 +1264,6 @@ ul { list-style: none; }
 }
 .switch-auth a:hover { color: var(--navy); }
 
-/* Terms text */
 .terms-text {
   font-size: 0.77rem;
   color: var(--gray-400);
@@ -1272,7 +1274,6 @@ ul { list-style: none; }
 
 .terms-text a { color: var(--mid); font-weight: 500; }
 
-/* Alert messages */
 .alert {
   padding: 0.8rem 1rem;
   border-radius: 9px;
@@ -1304,7 +1305,6 @@ ul { list-style: none; }
   50%       { opacity: 0.5; transform: scale(0.85); }
 }
 
-/* Scroll-triggered fade in */
 .reveal {
   opacity: 0;
   transform: translateY(30px);
