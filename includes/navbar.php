@@ -9,7 +9,7 @@ if (!isset($base)) $base = '';
 
     <!-- Logo -->
     <a href="<?= $base ?>index.php" class="nav-logo">
-      <img src="<?= $base ?>assets/images/uc-logo.png" alt="University of Cebu" class="nav-uc-logo" />
+      <img src="<?= $base ?>assets/images/uc-logo-white.png" alt="University of Cebu" class="nav-uc-logo" />
       <div class="logo-text">
         <span class="org-name">University of Cebu</span>
         <span class="org-sub">Computer Laboratory System</span>

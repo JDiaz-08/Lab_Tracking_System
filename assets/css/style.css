@@ -87,14 +87,14 @@ ul { list-style: none; }
   height: 46px;
   width: auto;
   object-fit: contain;
-  filter: brightness(0) invert(1);
+  /* no filter needed — uc-logo-white.png is pre-rendered white */
   flex-shrink: 0;
 }
 
 .footer-uc-logo {
   height: 40px;
   /* Slightly dimmed in footer context */
-  filter: brightness(0) invert(0.75);
+  filter: none; /* colored logo with transparent bg looks great in footer */
 }
 
 .ccs-real-logo {
