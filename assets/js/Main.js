@@ -1,8 +1,8 @@
 // ===========================
-//  NAVBAR — scroll & mobile
+//  NAVBAR — scroll & mobile (public)
 // ===========================
 const navbar     = document.querySelector('.navbar');
-const hamburger  = document.querySelector('.hamburger');
+const hamburger  = document.querySelector('.hamburger:not(.user-hamburger)');
 const mobileMenu = document.querySelector('.mobile-menu');
 
 if (navbar) {
@@ -16,8 +16,6 @@ if (hamburger && mobileMenu) {
     hamburger.classList.toggle('open');
     mobileMenu.classList.toggle('open');
   });
-
-  // Close mobile menu when any link inside it is clicked
   mobileMenu.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', () => {
       hamburger.classList.remove('open');
@@ -27,14 +25,44 @@ if (hamburger && mobileMenu) {
 }
 
 // ===========================
+//  USER NAVBAR — mobile
+// ===========================
+const userHamburger  = document.getElementById('userHamburger');
+const userMobileMenu = document.getElementById('userMobileMenu');
+
+if (userHamburger && userMobileMenu) {
+  userHamburger.addEventListener('click', () => {
+    userHamburger.classList.toggle('open');
+    userMobileMenu.classList.toggle('open');
+  });
+}
+
+// ===========================
+//  NOTIFICATION DROPDOWN
+// ===========================
+const notifToggle   = document.getElementById('notifToggle');
+const notifDropdown = document.getElementById('notifDropdown');
+
+if (notifToggle && notifDropdown) {
+  notifToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    notifDropdown.classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!notifDropdown.contains(e.target) && e.target !== notifToggle) {
+      notifDropdown.classList.remove('open');
+    }
+  });
+}
+
+// ===========================
 //  SCROLL REVEAL
 // ===========================
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry, i) => {
     if (entry.isIntersecting) {
-      setTimeout(() => {
-        entry.target.classList.add('visible');
-      }, i * 80);
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
       revealObserver.unobserve(entry.target);
     }
   });
@@ -43,41 +71,27 @@ const revealObserver = new IntersectionObserver((entries) => {
 document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
 // ===========================
-//  AUTH TABS
+//  AUTH TABS (login page)
 // ===========================
 const tabBtns = document.querySelectorAll('.tab-btn');
 const panels  = document.querySelectorAll('.auth-panel');
 
 function showTab(tabName) {
-  tabBtns.forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tabName);
-  });
-  panels.forEach(panel => {
-    panel.classList.toggle('active', panel.id === `panel-${tabName}`);
-  });
+  tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+  panels.forEach(p   => p.classList.toggle('active',   p.id === `panel-${tabName}`));
 }
 
 tabBtns.forEach(btn => {
   btn.addEventListener('click', () => showTab(btn.dataset.tab));
 });
 
-// Switch links inside panels (e.g. "Don't have an account? Create one")
 document.querySelectorAll('[data-switch]').forEach(link => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    showTab(link.dataset.switch);
-  });
+  link.addEventListener('click', (e) => { e.preventDefault(); showTab(link.dataset.switch); });
 });
 
-// ===========================
-//  FORGOT PASSWORD PANEL
-// ===========================
 const forgotLink = document.querySelector('.forgot-link');
 if (forgotLink) {
-  forgotLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showTab('forgot');
-  });
+  forgotLink.addEventListener('click', (e) => { e.preventDefault(); showTab('forgot'); });
 }
 
 // ===========================
@@ -87,36 +101,22 @@ document.querySelectorAll('.toggle-pass').forEach(icon => {
   icon.addEventListener('click', () => {
     const input = icon.previousElementSibling;
     if (!input) return;
-    if (input.type === 'password') {
-      input.type = 'text';
-      icon.textContent = '🙈';
-    } else {
-      input.type = 'password';
-      icon.textContent = '👁️';
-    }
+    input.type  = input.type === 'password' ? 'text' : 'password';
+    icon.textContent = input.type === 'password' ? '👁️' : '🙈';
   });
 });
 
 // ===========================
 //  ACTIVE NAV LINK
-//  Use full pathname matching to avoid false positives.
 // ===========================
 const path = window.location.pathname.replace(/\/$/, '') || '/';
-
 document.querySelectorAll('.nav-links a, .mobile-menu a').forEach(link => {
   const href = link.getAttribute('href');
   if (!href) return;
-
-  // Normalise by stripping leading './' or '../' for comparison
   const normHref = href.replace(/^(\.\.\/)+|^\.\//, '');
   const normPath = path.replace(/^\//, '');
-
-  // Match if the path ends with the href (handles root and subdir installs)
-  if (
-    normPath === normHref ||
-    normPath.endsWith('/' + normHref) ||
-    (normHref === 'index.php' && (normPath === '' || normPath.endsWith('/')))
-  ) {
+  if (normPath === normHref || normPath.endsWith('/' + normHref) ||
+      (normHref === 'index.php' && (normPath === '' || normPath.endsWith('/')))) {
     link.classList.add('active');
   }
 });
