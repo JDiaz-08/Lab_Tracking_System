@@ -6,31 +6,36 @@ require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 $db = getDB();
 
-$flash = '';
+$flash     = '';
+$flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $rid    = (int)($_POST['res_id'] ?? 0);
 
     if ($action === 'approve') {
-        $res = $db->query("SELECT * FROM reservations WHERE id=$rid")->fetch();
+        $res = $db->prepare("SELECT * FROM reservations WHERE id=?");
+        $res->execute([$rid]);
+        $res = $res->fetch();
         $db->prepare("UPDATE reservations SET status='approved' WHERE id=?")->execute([$rid]);
         if ($res) {
             $db->prepare("INSERT INTO notifications (user_id,message) VALUES (?,?)")
                ->execute([$res['user_id'],
-                   "✅ Your reservation for Lab {$res['lab_room']} on "
+                   "Your reservation for Lab {$res['lab_room']} on "
                    . date('F j, Y', strtotime($res['date']))
-                   . " at {$res['time_slot']} has been approved!"]);
+                   . " at {$res['time_slot']} has been approved."]);
         }
         $flash = 'Reservation approved.';
     }
     elseif ($action === 'reject') {
-        $res = $db->query("SELECT * FROM reservations WHERE id=$rid")->fetch();
+        $res = $db->prepare("SELECT * FROM reservations WHERE id=?");
+        $res->execute([$rid]);
+        $res = $res->fetch();
         $db->prepare("UPDATE reservations SET status='rejected' WHERE id=?")->execute([$rid]);
         if ($res) {
             $db->prepare("INSERT INTO notifications (user_id,message) VALUES (?,?)")
                ->execute([$res['user_id'],
-                   "❌ Your reservation for Lab {$res['lab_room']} on "
+                   "Your reservation for Lab {$res['lab_room']} on "
                    . date('F j, Y', strtotime($res['date']))
                    . " has been rejected."]);
         }
@@ -41,10 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = 'Reservation deleted.';
     }
 
-    header('Location: reservation.php?flash=' . urlencode($flash)); exit;
+    header('Location: reservation.php?flash=' . urlencode($flash) . '&ft=' . urlencode($flashType));
+    exit;
 }
 
-if (isset($_GET['flash'])) $flash = $_GET['flash'];
+if (isset($_GET['flash'])) {
+    $flash     = $_GET['flash'];
+    $flashType = $_GET['ft'] ?? 'success';
+}
 
 $reservations = $db->query("
     SELECT r.*, u.student_id,
@@ -61,20 +70,29 @@ $reservations = $db->query("
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Reservations — UC CompLab Admin</title>
   <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
 </head>
 <body>
 <?php require_once __DIR__ . '/../../includes/admin-navbar.php'; ?>
 
 <div class="admin-page">
   <div class="admin-inner">
+
     <h1 class="a-page-title">Reservation Management</h1>
 
     <?php if ($flash): ?>
-      <div class="a-flash a-flash-success">✅ <?= htmlspecialchars($flash) ?></div>
+      <div class="a-flash a-flash-<?= $flashType === 'error' ? 'error' : 'success' ?>">
+        <i class="bi bi-<?= $flashType === 'error' ? 'exclamation-circle-fill' : 'check-circle-fill' ?>"></i>
+        <?= htmlspecialchars($flash) ?>
+      </div>
     <?php endif; ?>
 
     <div class="a-card">
+      <div class="a-card-header">
+        <i class="bi bi-calendar-check"></i> All Reservations
+      </div>
       <div class="a-card-body">
+
         <div class="a-table-controls">
           <div class="a-entries-wrap">
             <select id="resSelect" class="a-entries-select">
@@ -114,25 +132,35 @@ $reservations = $db->query("
                     <td><?= date('M j, Y', strtotime($r['date'])) ?></td>
                     <td><?= htmlspecialchars($r['time_slot']) ?></td>
                     <td><?= htmlspecialchars($r['purpose'] ?? '—') ?></td>
-                    <td><span class="a-badge badge-<?= $r['status'] ?>"><?= ucfirst($r['status']) ?></span></td>
+                    <td>
+                      <span class="a-badge badge-<?= $r['status'] ?>">
+                        <?= ucfirst($r['status']) ?>
+                      </span>
+                    </td>
                     <td style="white-space:nowrap;">
                       <?php if ($r['status'] === 'pending'): ?>
                         <form method="POST" style="display:inline;">
                           <input type="hidden" name="action" value="approve">
                           <input type="hidden" name="res_id" value="<?= $r['id'] ?>">
-                          <button type="submit" class="a-btn a-btn-green a-btn-sm">Approve</button>
+                          <button type="submit" class="a-btn a-btn-green a-btn-sm">
+                            <i class="bi bi-check-lg"></i> Approve
+                          </button>
                         </form>
                         <form method="POST" style="display:inline;">
                           <input type="hidden" name="action" value="reject">
                           <input type="hidden" name="res_id" value="<?= $r['id'] ?>">
-                          <button type="submit" class="a-btn a-btn-yellow a-btn-sm">Reject</button>
+                          <button type="submit" class="a-btn a-btn-yellow a-btn-sm">
+                            <i class="bi bi-x-lg"></i> Reject
+                          </button>
                         </form>
                       <?php endif; ?>
                       <form method="POST" style="display:inline;"
                             onsubmit="return confirm('Delete this reservation?')">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="res_id" value="<?= $r['id'] ?>">
-                        <button type="submit" class="a-btn a-btn-red a-btn-sm">Delete</button>
+                        <button type="submit" class="a-btn a-btn-red a-btn-sm">
+                          <i class="bi bi-trash3"></i>
+                        </button>
                       </form>
                     </td>
                   </tr>
@@ -146,6 +174,7 @@ $reservations = $db->query("
           <div class="a-table-info" id="resInfo"></div>
           <div class="a-pagination"  id="resPag"></div>
         </div>
+
       </div>
     </div>
   </div>
@@ -153,6 +182,10 @@ $reservations = $db->query("
 
 <script src="<?= $base ?>assets/js/admin.js"></script>
 <script>
-initAdminTable({ tableId:'resTable', bodyId:'resBody', infoId:'resInfo', pagId:'resPag', searchId:'resSearch', selectId:'resSelect' });
+initAdminTable({
+  tableId:'resTable', bodyId:'resBody', infoId:'resInfo',
+  pagId:'resPag', searchId:'resSearch', selectId:'resSelect'
+});
 </script>
-</body></html>
+</body>
+</html>

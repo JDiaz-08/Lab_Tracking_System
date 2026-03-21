@@ -6,10 +6,9 @@ require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 $db = getDB();
 
-$flash = '';
+$flash     = '';
 $flashType = 'success';
 
-// ---- Handle POST actions ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -28,14 +27,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dup = $db->prepare("SELECT id FROM users WHERE student_id=? OR email=?");
         $dup->execute([$sid, $em]);
         if ($dup->fetch()) {
-            $flash = 'Student ID or Email already exists.'; $flashType='error';
+            $flash = 'Student ID or Email already exists.';
+            $flashType = 'error';
         } else {
-            $db->prepare("INSERT INTO users (first_name,last_name,middle_name,student_id,course,course_level,email,address,password,remaining_sessions) VALUES (?,?,?,?,?,?,?,?,?,?)")
-               ->execute([$fn,$ln,$mn,$sid,$crs,$lvl,$em,$adr,password_hash($pw,PASSWORD_DEFAULT),$rem]);
+            $db->prepare("
+                INSERT INTO users
+                    (first_name,last_name,middle_name,student_id,course,course_level,email,address,password,remaining_sessions)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            ")->execute([$fn,$ln,$mn,$sid,$crs,$lvl,$em,$adr,password_hash($pw,PASSWORD_DEFAULT),$rem]);
             $flash = "Student {$fn} {$ln} added successfully.";
         }
     }
-
     elseif ($action === 'edit') {
         $id  = (int)$_POST['user_id'];
         $fn  = trim($_POST['first_name']  ?? '');
@@ -46,17 +48,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $adr = trim($_POST['address']     ?? '');
         $rem = (int)($_POST['remaining_sessions'] ?? 30);
 
-        $db->prepare("UPDATE users SET first_name=?,last_name=?,middle_name=?,course_level=?,email=?,address=?,remaining_sessions=? WHERE id=?")
-           ->execute([$fn,$ln,$mn,$lvl,$em,$adr,$rem,$id]);
+        $db->prepare("
+            UPDATE users
+            SET first_name=?,last_name=?,middle_name=?,course_level=?,email=?,address=?,remaining_sessions=?
+            WHERE id=?
+        ")->execute([$fn,$ln,$mn,$lvl,$em,$adr,$rem,$id]);
         $flash = 'Student updated.';
     }
-
     elseif ($action === 'delete') {
         $id = (int)$_POST['user_id'];
         $db->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
         $flash = 'Student deleted.';
     }
-
     elseif ($action === 'reset_all') {
         $db->exec("UPDATE users SET remaining_sessions = 30");
         $flash = 'All sessions reset to 30.';
@@ -67,11 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (isset($_GET['flash'])) {
-    $flash = $_GET['flash'];
+    $flash     = $_GET['flash'];
     $flashType = $_GET['ft'] ?? 'success';
 }
 
-// ---- Fetch students ----
 $search = trim($_GET['q'] ?? '');
 if ($search) {
     $s = $db->prepare("
@@ -84,8 +86,6 @@ if ($search) {
     $s = $db->query("SELECT * FROM users ORDER BY student_id ASC");
 }
 $students = $s->fetchAll();
-
-$yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,6 +94,7 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Students — UC CompLab Admin</title>
   <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
 </head>
 <body>
 <?php require_once __DIR__ . '/../../includes/admin-navbar.php'; ?>
@@ -105,26 +106,30 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
 
     <?php if ($flash): ?>
       <div class="a-flash a-flash-<?= $flashType === 'error' ? 'error' : 'success' ?>">
-        <?= $flashType === 'error' ? '❌' : '✅' ?> <?= htmlspecialchars($flash) ?>
+        <i class="bi bi-<?= $flashType === 'error' ? 'exclamation-circle-fill' : 'check-circle-fill' ?>"></i>
+        <?= htmlspecialchars($flash) ?>
       </div>
     <?php endif; ?>
 
     <div class="a-card">
+      <div class="a-card-header">
+        <i class="bi bi-people"></i> Student Records
+      </div>
       <div class="a-card-body">
 
-        <!-- Top action buttons -->
         <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
           <button class="a-btn a-btn-primary" data-open-modal="addStudentModal">
-            Add Students
+            <i class="bi bi-person-plus"></i> Add Student
           </button>
-          <form method="POST" action="" style="display:inline;"
+          <form method="POST" style="display:inline;"
                 onsubmit="return confirm('Reset ALL students to 30 sessions?')">
             <input type="hidden" name="action" value="reset_all">
-            <button type="submit" class="a-btn a-btn-red">Reset All Session</button>
+            <button type="submit" class="a-btn a-btn-red">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset All Sessions
+            </button>
           </form>
         </div>
 
-        <!-- Table controls -->
         <div class="a-table-controls">
           <div class="a-entries-wrap">
             <select id="stuSelect" class="a-entries-select">
@@ -139,7 +144,6 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
           </div>
         </div>
 
-        <!-- Table -->
         <div class="a-table-wrap">
           <table class="a-table" id="stuTable">
             <thead>
@@ -148,29 +152,37 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
                 <th class="a-sortable" data-col="1">Name <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="2">Year Level <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="3">Course <span class="a-sort-icon">⇅</span></th>
-                <th class="a-sortable" data-col="4">Remaining Session <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="4">Sessions Left <span class="a-sort-icon">⇅</span></th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="stuBody">
               <?php if (empty($students)): ?>
-                <tr class="a-table-empty"><td colspan="6">No data available</td></tr>
+                <tr class="a-table-empty"><td colspan="6">No students found.</td></tr>
               <?php else: ?>
                 <?php foreach ($students as $s): ?>
                   <tr class="a-data-row">
                     <td><?= htmlspecialchars($s['student_id']) ?></td>
-                    <td><?= htmlspecialchars($s['first_name'].' '.($s['middle_name']?$s['middle_name'][0].'. ':'').$s['last_name']) ?></td>
-                    <td><?= $s['course_level'] ?></td>
+                    <td><?= htmlspecialchars(
+                          $s['first_name'] . ' ' .
+                          ($s['middle_name'] ? $s['middle_name'][0] . '. ' : '') .
+                          $s['last_name']
+                        ) ?></td>
+                    <td><?= (int)$s['course_level'] ?></td>
                     <td><?= htmlspecialchars($s['course']) ?></td>
                     <td><?= (int)($s['remaining_sessions'] ?? 30) ?></td>
                     <td>
                       <button class="a-btn a-btn-primary a-btn-sm"
-                        onclick="openEdit(<?= htmlspecialchars(json_encode($s)) ?>)">Edit</button>
-                      <form method="POST" action="" style="display:inline;"
+                              onclick="openEdit(<?= htmlspecialchars(json_encode($s)) ?>)">
+                        <i class="bi bi-pencil"></i> Edit
+                      </button>
+                      <form method="POST" style="display:inline;"
                             onsubmit="return confirm('Delete this student?')">
                         <input type="hidden" name="action"  value="delete">
                         <input type="hidden" name="user_id" value="<?= $s['id'] ?>">
-                        <button type="submit" class="a-btn a-btn-red a-btn-sm">Delete</button>
+                        <button type="submit" class="a-btn a-btn-red a-btn-sm">
+                          <i class="bi bi-trash3"></i> Delete
+                        </button>
                       </form>
                     </td>
                   </tr>
@@ -184,9 +196,9 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
           <div class="a-table-info" id="stuInfo"></div>
           <div class="a-pagination"  id="stuPag"></div>
         </div>
+
       </div>
     </div>
-
   </div>
 </div>
 
@@ -194,40 +206,64 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
 <div class="a-modal-overlay" id="addStudentModal">
   <div class="a-modal" style="max-width:500px;">
     <div class="a-modal-header">
-      Add Student
-      <button class="a-modal-close" data-close-modal="addStudentModal">×</button>
+      <span>Add Student</span>
+      <button class="a-modal-close" data-close-modal="addStudentModal">
+        <i class="bi bi-x-lg" style="font-size:0.7rem;"></i>
+      </button>
     </div>
     <form method="POST" action="">
       <input type="hidden" name="action" value="add">
-      <div class="a-modal-body" style="display:grid;gap:0.6rem;">
-        <div class="a-mrow"><label class="a-mlabel">First Name *</label>
-          <input type="text" name="first_name" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Last Name *</label>
-          <input type="text" name="last_name"  class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Middle Name</label>
-          <input type="text" name="middle_name" class="a-minput" /></div>
-        <div class="a-mrow"><label class="a-mlabel">Student ID *</label>
-          <input type="text" name="student_id" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Course *</label>
-          <input type="text" name="course" class="a-minput" placeholder="BSIT" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Year Level *</label>
+      <div class="a-modal-body" style="display:grid; gap:0.55rem;">
+        <div class="a-mrow">
+          <label class="a-mlabel">First Name *</label>
+          <input type="text" name="first_name" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Last Name *</label>
+          <input type="text" name="last_name" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Middle Name</label>
+          <input type="text" name="middle_name" class="a-minput" />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Student ID *</label>
+          <input type="text" name="student_id" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Course *</label>
+          <input type="text" name="course" class="a-minput" placeholder="BSIT" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Year Level *</label>
           <select name="course_level" class="a-minput">
             <?php for($y=1;$y<=5;$y++): ?>
-              <option value="<?=$y?>"><?=$y?>th Year</option>
+              <option value="<?= $y ?>"><?= $y ?>th Year</option>
             <?php endfor; ?>
-          </select></div>
-        <div class="a-mrow"><label class="a-mlabel">Email *</label>
-          <input type="email" name="email" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Address *</label>
-          <input type="text" name="address" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Password</label>
-          <input type="text" name="password" class="a-minput" placeholder="Default: password123"/></div>
-        <div class="a-mrow"><label class="a-mlabel">Sessions</label>
-          <input type="number" name="remaining_sessions" class="a-minput" value="30" min="0" max="30"/></div>
+          </select>
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Email *</label>
+          <input type="email" name="email" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Address *</label>
+          <input type="text" name="address" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Password</label>
+          <input type="text" name="password" class="a-minput" placeholder="Default: password123" />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Sessions</label>
+          <input type="number" name="remaining_sessions" class="a-minput" value="30" min="0" max="30" />
+        </div>
       </div>
       <div class="a-modal-footer">
         <button type="button" class="a-btn a-btn-gray" data-close-modal="addStudentModal">Cancel</button>
-        <button type="submit" class="a-btn a-btn-primary">Add Student</button>
+        <button type="submit" class="a-btn a-btn-primary">
+          <i class="bi bi-person-plus"></i> Add Student
+        </button>
       </div>
     </form>
   </div>
@@ -237,39 +273,61 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
 <div class="a-modal-overlay" id="editStudentModal">
   <div class="a-modal" style="max-width:500px;">
     <div class="a-modal-header">
-      Edit Student
-      <button class="a-modal-close" data-close-modal="editStudentModal">×</button>
+      <span>Edit Student</span>
+      <button class="a-modal-close" data-close-modal="editStudentModal">
+        <i class="bi bi-x-lg" style="font-size:0.7rem;"></i>
+      </button>
     </div>
     <form method="POST" action="">
       <input type="hidden" name="action"  value="edit">
       <input type="hidden" name="user_id" id="editUserId">
-      <div class="a-modal-body" style="display:grid;gap:0.6rem;">
-        <div class="a-mrow"><label class="a-mlabel">First Name *</label>
-          <input type="text"  name="first_name"  id="editFN" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Last Name *</label>
-          <input type="text"  name="last_name"   id="editLN" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Middle Name</label>
-          <input type="text"  name="middle_name" id="editMN" class="a-minput" /></div>
-        <div class="a-mrow"><label class="a-mlabel">Student ID</label>
-          <input type="text"  id="editSID" class="a-minput" disabled /></div>
-        <div class="a-mrow"><label class="a-mlabel">Course</label>
-          <input type="text"  id="editCRS" class="a-minput" disabled /></div>
-        <div class="a-mrow"><label class="a-mlabel">Year Level *</label>
+      <div class="a-modal-body" style="display:grid; gap:0.55rem;">
+        <div class="a-mrow">
+          <label class="a-mlabel">First Name *</label>
+          <input type="text" name="first_name" id="editFN" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Last Name *</label>
+          <input type="text" name="last_name" id="editLN" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Middle Name</label>
+          <input type="text" name="middle_name" id="editMN" class="a-minput" />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Student ID</label>
+          <input type="text" id="editSID" class="a-minput" disabled />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Course</label>
+          <input type="text" id="editCRS" class="a-minput" disabled />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Year Level *</label>
           <select name="course_level" id="editLVL" class="a-minput">
             <?php for($y=1;$y<=5;$y++): ?>
-              <option value="<?=$y?>"><?=$y?>th Year</option>
+              <option value="<?= $y ?>"><?= $y ?>th Year</option>
             <?php endfor; ?>
-          </select></div>
-        <div class="a-mrow"><label class="a-mlabel">Email *</label>
-          <input type="email" name="email"   id="editEM" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Address *</label>
-          <input type="text"  name="address" id="editADR" class="a-minput" required /></div>
-        <div class="a-mrow"><label class="a-mlabel">Sessions</label>
-          <input type="number" name="remaining_sessions" id="editREM" class="a-minput" min="0" max="30"/></div>
+          </select>
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Email *</label>
+          <input type="email" name="email" id="editEM" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Address *</label>
+          <input type="text" name="address" id="editADR" class="a-minput" required />
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">Sessions</label>
+          <input type="number" name="remaining_sessions" id="editREM" class="a-minput" min="0" max="30" />
+        </div>
       </div>
       <div class="a-modal-footer">
         <button type="button" class="a-btn a-btn-gray" data-close-modal="editStudentModal">Cancel</button>
-        <button type="submit" class="a-btn a-btn-primary">Save Changes</button>
+        <button type="submit" class="a-btn a-btn-primary">
+          <i class="bi bi-floppy"></i> Save Changes
+        </button>
       </div>
     </form>
   </div>
@@ -278,20 +336,24 @@ $yearMap = [1=>'1st',2=>'2nd',3=>'3rd',4=>'4th',5=>'5th'];
 <script>
 function openEdit(s) {
   document.getElementById('editUserId').value = s.id;
-  document.getElementById('editFN').value  = s.first_name;
-  document.getElementById('editLN').value  = s.last_name;
-  document.getElementById('editMN').value  = s.middle_name || '';
-  document.getElementById('editSID').value = s.student_id;
-  document.getElementById('editCRS').value = s.course;
-  document.getElementById('editLVL').value = s.course_level;
-  document.getElementById('editEM').value  = s.email;
-  document.getElementById('editADR').value = s.address;
-  document.getElementById('editREM').value = s.remaining_sessions ?? 30;
+  document.getElementById('editFN').value     = s.first_name;
+  document.getElementById('editLN').value     = s.last_name;
+  document.getElementById('editMN').value     = s.middle_name || '';
+  document.getElementById('editSID').value    = s.student_id;
+  document.getElementById('editCRS').value    = s.course;
+  document.getElementById('editLVL').value    = s.course_level;
+  document.getElementById('editEM').value     = s.email;
+  document.getElementById('editADR').value    = s.address;
+  document.getElementById('editREM').value    = s.remaining_sessions ?? 30;
   openModal('editStudentModal');
 }
 </script>
 <script src="<?= $base ?>assets/js/admin.js"></script>
 <script>
-initAdminTable({ tableId:'stuTable', bodyId:'stuBody', infoId:'stuInfo', pagId:'stuPag', searchId:'stuSearch', selectId:'stuSelect' });
+initAdminTable({
+  tableId:'stuTable', bodyId:'stuBody', infoId:'stuInfo',
+  pagId:'stuPag', searchId:'stuSearch', selectId:'stuSelect'
+});
 </script>
-</body></html>
+</body>
+</html>

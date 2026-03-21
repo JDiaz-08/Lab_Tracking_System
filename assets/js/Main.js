@@ -48,7 +48,6 @@ if (notifToggle && notifDropdown) {
     e.stopPropagation();
     notifDropdown.classList.toggle('open');
   });
-
   document.addEventListener('click', (e) => {
     if (!notifDropdown.contains(e.target) && e.target !== notifToggle) {
       notifDropdown.classList.remove('open');
@@ -86,12 +85,18 @@ tabBtns.forEach(btn => {
 });
 
 document.querySelectorAll('[data-switch]').forEach(link => {
-  link.addEventListener('click', (e) => { e.preventDefault(); showTab(link.dataset.switch); });
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    showTab(link.dataset.switch);
+  });
 });
 
 const forgotLink = document.querySelector('.forgot-link');
 if (forgotLink) {
-  forgotLink.addEventListener('click', (e) => { e.preventDefault(); showTab('forgot'); });
+  forgotLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    showTab('forgot');
+  });
 }
 
 // ===========================
@@ -99,10 +104,11 @@ if (forgotLink) {
 // ===========================
 document.querySelectorAll('.toggle-pass').forEach(icon => {
   icon.addEventListener('click', () => {
-    const input = icon.previousElementSibling;
+    const input = icon.closest('.input-wrapper')?.querySelector('input');
     if (!input) return;
-    input.type  = input.type === 'password' ? 'text' : 'password';
-    icon.textContent = input.type === 'password' ? '👁️' : '🙈';
+    input.type = input.type === 'password' ? 'text' : 'password';
+    const i = icon.querySelector('i');
+    if (i) i.className = input.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
   });
 });
 
@@ -115,8 +121,11 @@ document.querySelectorAll('.nav-links a, .mobile-menu a').forEach(link => {
   if (!href) return;
   const normHref = href.replace(/^(\.\.\/)+|^\.\//, '');
   const normPath = path.replace(/^\//, '');
-  if (normPath === normHref || normPath.endsWith('/' + normHref) ||
-      (normHref === 'index.php' && (normPath === '' || normPath.endsWith('/')))) {
+  if (
+    normPath === normHref ||
+    normPath.endsWith('/' + normHref) ||
+    (normHref === 'index.php' && (normPath === '' || normPath.endsWith('/')))
+  ) {
     link.classList.add('active');
   }
 });

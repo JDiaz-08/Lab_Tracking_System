@@ -1,8 +1,4 @@
 <?php
-/**
- * user-navbar.php — Post-login navigation bar
- * Requires: $base, $db (PDO), $_SESSION['user']
- */
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $_unread      = isset($db) ? getUnreadCount($db) : 0;
@@ -13,14 +9,12 @@ $_initials    = strtoupper(
     substr($_currentUser['last_name']  ?? '',  0, 1)
 );
 
-// Mark as read when notification panel is opened (via AJAX or page load)
 if (isset($_GET['mark_read']) && isset($db)) {
     markAllRead($db);
     header('Location: ' . $_SERVER['REQUEST_URI']);
     exit;
 }
 
-// Determine active page for nav highlight
 $_currentFile = basename($_SERVER['PHP_SELF']);
 function _navActive(string $file): string {
     global $_currentFile;
@@ -30,7 +24,6 @@ function _navActive(string $file): string {
 <nav class="user-navbar">
   <div class="user-nav-container">
 
-    <!-- Brand -->
     <a href="<?= $base ?>pages/dashboard.php" class="user-nav-brand">
       <div class="user-nav-badge">UC</div>
       <div class="logo-text">
@@ -39,13 +32,12 @@ function _navActive(string $file): string {
       </div>
     </a>
 
-    <!-- Desktop Links -->
     <ul class="user-nav-links">
 
       <!-- Notification Bell -->
       <li class="notif-wrapper">
         <button class="notif-btn" id="notifToggle" aria-label="Notifications">
-          🔔
+          <i class="bi bi-bell"></i>
           <?php if ($_unread > 0): ?>
             <span class="notif-badge"><?= $_unread > 9 ? '9+' : $_unread ?></span>
           <?php endif; ?>
@@ -58,7 +50,6 @@ function _navActive(string $file): string {
               <a href="?mark_read=1" class="notif-mark-read">Mark all read</a>
             <?php endif; ?>
           </div>
-
           <div class="notif-list">
             <?php if (empty($_notifs)): ?>
               <div class="notif-empty">No notifications yet.</div>
@@ -77,18 +68,25 @@ function _navActive(string $file): string {
         </div>
       </li>
 
-      <li><a href="<?= $base ?>pages/dashboard.php"    class="<?= _navActive('dashboard.php') ?>">Home</a></li>
-      <li><a href="<?= $base ?>pages/edit-profile.php" class="<?= _navActive('edit-profile.php') ?>">Edit Profile</a></li>
-      <li><a href="<?= $base ?>pages/history.php"      class="<?= _navActive('history.php') ?>">History</a></li>
-      <li><a href="<?= $base ?>pages/reserve.php"      class="<?= _navActive('reserve.php') ?>">Reserve</a></li>
+      <li><a href="<?= $base ?>pages/dashboard.php" class="<?= _navActive('dashboard.php') ?>">
+        <i class="bi bi-house"></i> Home
+      </a></li>
+      <li><a href="<?= $base ?>pages/edit-profile.php" class="<?= _navActive('edit-profile.php') ?>">
+        <i class="bi bi-person"></i> Profile
+      </a></li>
+      <li><a href="<?= $base ?>pages/history.php" class="<?= _navActive('history.php') ?>">
+        <i class="bi bi-clock-history"></i> History
+      </a></li>
+      <li><a href="<?= $base ?>pages/reserve.php" class="<?= _navActive('reserve.php') ?>">
+        <i class="bi bi-calendar-check"></i> Reserve
+      </a></li>
       <li>
         <a href="<?= $base ?>pages/logout.php" class="user-nav-logout">
-          Logout
+          <i class="bi bi-box-arrow-right"></i> Logout
         </a>
       </li>
     </ul>
 
-    <!-- Avatar (desktop) -->
     <div class="user-avatar-wrap">
       <div class="user-avatar"><?= $_initials ?></div>
       <span class="user-name-short">
@@ -96,14 +94,11 @@ function _navActive(string $file): string {
       </span>
     </div>
 
-    <!-- Hamburger -->
     <button class="hamburger user-hamburger" id="userHamburger" aria-label="Toggle menu">
       <span></span><span></span><span></span>
     </button>
-
   </div>
 
-  <!-- Mobile Menu -->
   <div class="user-mobile-menu" id="userMobileMenu">
     <div class="mobile-user-info">
       <div class="user-avatar"><?= $_initials ?></div>
@@ -112,10 +107,10 @@ function _navActive(string $file): string {
         <small><?= htmlspecialchars($_currentUser['student_id'] ?? '') ?></small>
       </div>
     </div>
-    <a href="<?= $base ?>pages/dashboard.php">🏠 Home</a>
-    <a href="<?= $base ?>pages/edit-profile.php">✏️ Edit Profile</a>
-    <a href="<?= $base ?>pages/history.php">📋 History</a>
-    <a href="<?= $base ?>pages/reserve.php">📅 Reserve</a>
-    <a href="<?= $base ?>pages/logout.php" class="mobile-logout">🚪 Logout</a>
+    <a href="<?= $base ?>pages/dashboard.php"><i class="bi bi-house"></i> Home</a>
+    <a href="<?= $base ?>pages/edit-profile.php"><i class="bi bi-person"></i> Edit Profile</a>
+    <a href="<?= $base ?>pages/history.php"><i class="bi bi-clock-history"></i> History</a>
+    <a href="<?= $base ?>pages/reserve.php"><i class="bi bi-calendar-check"></i> Reserve</a>
+    <a href="<?= $base ?>pages/logout.php" class="mobile-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
   </div>
 </nav>

@@ -8,7 +8,8 @@ $db = getDB();
 
 $byPurpose = $db->query("
     SELECT purpose, COUNT(*) as cnt
-    FROM sit_in_logs WHERE purpose IS NOT NULL AND purpose != ''
+    FROM sit_in_logs
+    WHERE purpose IS NOT NULL AND purpose != ''
     GROUP BY purpose ORDER BY cnt DESC
 ")->fetchAll();
 
@@ -36,6 +37,7 @@ $completed = $total - $active;
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Sit-in Reports — UC CompLab Admin</title>
   <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
@@ -43,44 +45,66 @@ $completed = $total - $active;
 
 <div class="admin-page">
   <div class="admin-inner">
+
     <h1 class="a-page-title">Sit-in Reports</h1>
 
-    <!-- Summary cards -->
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:1.5rem;">
-      <?php foreach ([
-        ['Total Sit-ins',  $total,     '#2563EB'],
-        ['Active Now',     $active,    '#16a34a'],
-        ['Completed',      $completed, '#475569'],
-      ] as [$label, $val, $color]): ?>
-        <div class="a-card">
-          <div class="a-card-body" style="text-align:center; padding:1.25rem;">
-            <div style="font-size:2rem; font-weight:800; color:<?= $color ?>;"><?= $val ?></div>
-            <div style="font-size:0.82rem; color:var(--a-gray600); margin-top:4px;"><?= $label ?></div>
-          </div>
+    <!-- Summary Cards -->
+    <div class="a-summary-cards">
+      <div class="a-summary-card">
+        <div class="a-summary-icon a-summary-icon-blue">
+          <i class="bi bi-clock-history"></i>
         </div>
-      <?php endforeach; ?>
+        <div>
+          <div class="a-summary-val"><?= $total ?></div>
+          <div class="a-summary-label">Total Sit-ins</div>
+        </div>
+      </div>
+      <div class="a-summary-card">
+        <div class="a-summary-icon a-summary-icon-green">
+          <i class="bi bi-pc-display-horizontal"></i>
+        </div>
+        <div>
+          <div class="a-summary-val"><?= $active ?></div>
+          <div class="a-summary-label">Active Now</div>
+        </div>
+      </div>
+      <div class="a-summary-card">
+        <div class="a-summary-icon a-summary-icon-slate">
+          <i class="bi bi-check2-circle"></i>
+        </div>
+        <div>
+          <div class="a-summary-val"><?= $completed ?></div>
+          <div class="a-summary-label">Completed</div>
+        </div>
+      </div>
     </div>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
-      <!-- By Purpose -->
+
       <div class="a-card">
-        <div class="a-card-header">📊 Sessions by Purpose</div>
+        <div class="a-card-header">
+          <i class="bi bi-pie-chart"></i> Sessions by Purpose
+        </div>
         <div class="a-card-body">
           <canvas id="purposeChart" height="200"></canvas>
         </div>
       </div>
-      <!-- By Lab -->
+
       <div class="a-card">
-        <div class="a-card-header">🏫 Sessions by Laboratory</div>
+        <div class="a-card-header">
+          <i class="bi bi-bar-chart"></i> Sessions by Laboratory
+        </div>
         <div class="a-card-body">
           <canvas id="labChart" height="200"></canvas>
         </div>
       </div>
+
     </div>
 
-    <!-- By Date -->
     <div class="a-card">
-      <div class="a-card-header">📅 Daily Sit-in Trend (Last 30 Days)</div>
+      <div class="a-card-header">
+        <i class="bi bi-graph-up"></i> Daily Sit-in Trend (Last 30 Days)
+      </div>
       <div class="a-card-body">
         <canvas id="dateChart" height="90"></canvas>
       </div>
@@ -90,34 +114,74 @@ $completed = $total - $active;
 </div>
 
 <script>
-const colors = ['#2563EB','#dc2626','#d97706','#16a34a','#7c3aed','#0891b2','#db2777'];
+const palette = ['#1a3a6b','#2563EB','#4988C4','#93c5fd','#1C4D8D','#0891b2','#475569'];
 
 new Chart(document.getElementById('purposeChart'), {
   type: 'pie',
   data: {
     labels: <?= json_encode(array_column($byPurpose,'purpose')) ?>,
-    datasets: [{ data: <?= json_encode(array_column($byPurpose,'cnt')) ?>, backgroundColor: colors }]
+    datasets: [{
+      data: <?= json_encode(array_column($byPurpose,'cnt')) ?>,
+      backgroundColor: palette,
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
   },
-  options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{family:'Outfit',size:11} } } } }
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { font: { family: 'Outfit', size: 11 }, padding: 12 }
+      }
+    }
+  }
 });
 
 new Chart(document.getElementById('labChart'), {
   type: 'bar',
   data: {
     labels: <?= json_encode(array_column($byLab,'lab_room')) ?>,
-    datasets: [{ label:'Sessions', data: <?= json_encode(array_column($byLab,'cnt')) ?>, backgroundColor: '#2563EB', borderRadius:5 }]
+    datasets: [{
+      label: 'Sessions',
+      data: <?= json_encode(array_column($byLab,'cnt')) ?>,
+      backgroundColor: '#2563EB',
+      borderRadius: 5
+    }]
   },
-  options: { responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} } } }
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1 } }
+    }
+  }
 });
 
 new Chart(document.getElementById('dateChart'), {
   type: 'line',
   data: {
     labels: <?= json_encode(array_column($byDate,'log_date')) ?>,
-    datasets: [{ label:'Sit-ins', data: <?= json_encode(array_column($byDate,'cnt')) ?>, borderColor:'#2563EB', backgroundColor:'rgba(37,99,235,0.08)', tension:0.35, fill:true, pointRadius:3 }]
+    datasets: [{
+      label: 'Sit-ins',
+      data: <?= json_encode(array_column($byDate,'cnt')) ?>,
+      borderColor: '#2563EB',
+      backgroundColor: 'rgba(37,99,235,0.07)',
+      tension: 0.35,
+      fill: true,
+      pointRadius: 3,
+      pointBackgroundColor: '#2563EB'
+    }]
   },
-  options: { responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} } } }
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1 } }
+    }
+  }
 });
 </script>
 <script src="<?= $base ?>assets/js/admin.js"></script>
-</body></html>
+</body>
+</html>

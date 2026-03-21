@@ -9,7 +9,7 @@ requireUser();
 $db  = getDB();
 $uid = $_SESSION['user_id'];
 
-// Refresh user
+// Refresh user from DB (gets latest remaining_sessions)
 $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->execute([$uid]);
 $user = $stmt->fetch();
@@ -26,38 +26,43 @@ $purposes = [
     'C Programming',
     'ASP.net Programming',
 ];
-
 $labRooms = ['524', '526', '528', '530', '542', 'Mac Laboratory'];
 
-// Remaining sessions: 30 max minus how many sit-ins they've done
-$used = (int) $db->prepare(
-    "SELECT COUNT(*) FROM sit_in_logs WHERE user_id = ?"
-)->execute([$uid]) ? $db->query(
-    "SELECT COUNT(*) FROM sit_in_logs WHERE user_id = $uid"
-)->fetchColumn() : 0;
-$remainingSessions = max(0, 30 - $used);
+// Read directly from the DB column — authoritative value managed by admin logout
+$remainingSessions = (int)($user['remaining_sessions'] ?? 30);
 
-/* ---- HANDLE SIT-IN (Submit button) ---- */
+/* ---- HANDLE SIT-IN ---- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'sitin') {
     $purpose = trim($_POST['purpose'] ?? '');
     $labRoom = trim($_POST['lab_room'] ?? '');
 
     if (!$purpose || !$labRoom) {
         $errors[] = 'Purpose and Lab are required.';
+    } elseif ($remainingSessions <= 0) {
+        $errors[] = 'You have no remaining sessions.';
     } else {
-        $db->prepare(
-            "INSERT INTO sit_in_logs (user_id, lab_room, purpose) VALUES (?, ?, ?)"
-        )->execute([$uid, $labRoom, $purpose]);
+        // Check for existing active session
+        $activeCheck = $db->prepare(
+            "SELECT id FROM sit_in_logs WHERE user_id = ? AND logout_time IS NULL"
+        );
+        $activeCheck->execute([$uid]);
+        if ($activeCheck->fetch()) {
+            $errors[] = 'You already have an active sit-in session.';
+        } else {
+            $db->prepare(
+                "INSERT INTO sit_in_logs (user_id, lab_room, purpose, status) VALUES (?, ?, ?, 'active')"
+            )->execute([$uid, $labRoom, $purpose]);
 
-        $db->prepare(
-            "INSERT INTO notifications (user_id, message) VALUES (?, ?)"
-        )->execute([$uid, "✅ Sit-in session started in Lab {$labRoom} for {$purpose}."]);
+            $db->prepare(
+                "INSERT INTO notifications (user_id, message) VALUES (?, ?)"
+            )->execute([$uid, "✅ Sit-in session started in Lab {$labRoom} for {$purpose}."]);
 
-        $sitSuccess = "Sit-in session logged successfully for Lab {$labRoom}!";
+            $sitSuccess = "Sit-in session logged for Lab {$labRoom}. Please check in with the administrator.";
+        }
     }
 }
 
-/* ---- HANDLE RESERVATION (Reserve button) ---- */
+/* ---- HANDLE RESERVATION ---- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reserve') {
     $purpose = trim($_POST['purpose_res'] ?? '');
     $labRoom = trim($_POST['lab_room_res'] ?? '');
@@ -142,7 +147,7 @@ require_once __DIR__ . '/../includes/user-navbar.php';
               <select name="purpose" class="res-input res-select">
                 <option value="" disabled selected>— Select Purpose —</option>
                 <?php foreach ($purposes as $p): ?>
-                  <option value="<?= $p ?>"><?= $p ?></option>
+                  <option value="<?= htmlspecialchars($p) ?>"><?= htmlspecialchars($p) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -154,7 +159,7 @@ require_once __DIR__ . '/../includes/user-navbar.php';
               <select name="lab_room" class="res-input res-select">
                 <option value="" disabled selected>— Select Lab —</option>
                 <?php foreach ($labRooms as $lab): ?>
-                  <option value="<?= $lab ?>"><?= $lab ?></option>
+                  <option value="<?= htmlspecialchars($lab) ?>"><?= htmlspecialchars($lab) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -163,7 +168,10 @@ require_once __DIR__ . '/../includes/user-navbar.php';
           <div class="res-row">
             <label class="res-label"></label>
             <div class="res-field">
-              <button type="submit" class="res-btn res-btn-submit">Submit</button>
+              <button type="submit" class="res-btn res-btn-submit"
+                <?= $remainingSessions <= 0 ? 'disabled title="No remaining sessions"' : '' ?>>
+                Submit
+              </button>
             </div>
           </div>
 
@@ -196,7 +204,7 @@ require_once __DIR__ . '/../includes/user-navbar.php';
               <select name="purpose_res" class="res-input res-select">
                 <option value="" disabled selected>— Select Purpose —</option>
                 <?php foreach ($purposes as $p): ?>
-                  <option value="<?= $p ?>"><?= $p ?></option>
+                  <option value="<?= htmlspecialchars($p) ?>"><?= htmlspecialchars($p) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -208,7 +216,7 @@ require_once __DIR__ . '/../includes/user-navbar.php';
               <select name="lab_room_res" class="res-input res-select">
                 <option value="" disabled selected>— Select Lab —</option>
                 <?php foreach ($labRooms as $lab): ?>
-                  <option value="<?= $lab ?>"><?= $lab ?></option>
+                  <option value="<?= htmlspecialchars($lab) ?>"><?= htmlspecialchars($lab) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>

@@ -16,12 +16,6 @@ $records = $db->query("
     JOIN users u ON u.id = s.user_id
     ORDER BY s.login_time DESC
 ")->fetchAll();
-
-function dur($a, $b) {
-    if (!$b) return '—';
-    $d = strtotime($b) - strtotime($a);
-    return floor($d/3600).'h '.floor(($d%3600)/60).'m';
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,16 +24,22 @@ function dur($a, $b) {
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Sit-in Records — UC CompLab Admin</title>
   <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
 </head>
 <body>
 <?php require_once __DIR__ . '/../../includes/admin-navbar.php'; ?>
 
 <div class="admin-page">
   <div class="admin-inner">
+
     <h1 class="a-page-title">View Sit-in Records</h1>
 
     <div class="a-card">
+      <div class="a-card-header">
+        <i class="bi bi-table"></i> All Sit-in Records
+      </div>
       <div class="a-card-body">
+
         <div class="a-table-controls">
           <div class="a-entries-wrap">
             <select id="recSelect" class="a-entries-select">
@@ -69,7 +69,7 @@ function dur($a, $b) {
             </thead>
             <tbody id="recBody">
               <?php if (empty($records)): ?>
-                <tr class="a-table-empty"><td colspan="8">No data available</td></tr>
+                <tr class="a-table-empty"><td colspan="8">No records found.</td></tr>
               <?php else: ?>
                 <?php foreach ($records as $r): ?>
                   <tr class="a-data-row">
@@ -95,6 +95,7 @@ function dur($a, $b) {
           <div class="a-table-info" id="recInfo"></div>
           <div class="a-pagination"  id="recPag"></div>
         </div>
+
       </div>
     </div>
   </div>
@@ -102,6 +103,10 @@ function dur($a, $b) {
 
 <script src="<?= $base ?>assets/js/admin.js"></script>
 <script>
-initAdminTable({ tableId:'recTable', bodyId:'recBody', infoId:'recInfo', pagId:'recPag', searchId:'recSearch', selectId:'recSelect' });
+initAdminTable({
+  tableId:'recTable', bodyId:'recBody', infoId:'recInfo',
+  pagId:'recPag', searchId:'recSearch', selectId:'recSelect'
+});
 </script>
-</body></html>
+</body>
+</html>
