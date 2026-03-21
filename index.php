@@ -1,4 +1,5 @@
 <?php
+// FILE: index.php
 $pageTitle = 'Home';
 $base = '';
 require_once __DIR__ . '/includes/header.php';
@@ -171,7 +172,7 @@ require_once __DIR__ . '/includes/navbar.php';
   </div>
 </section>
 
-<!-- ===================== STATS ===================== -->
+<!-- ===================== STATS BANNER ===================== -->
 <section class="stats-banner">
   <div class="section-container">
     <div class="stats-row">

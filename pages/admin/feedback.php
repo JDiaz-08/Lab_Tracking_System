@@ -1,4 +1,5 @@
 <?php
+// FILE: pages/admin/feedback.php
 session_start();
 $base = '../../';
 require_once __DIR__ . '/../../config/database.php';
@@ -34,8 +35,8 @@ $total     = (int)$db->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
 
     <h1 class="a-page-title">Feedback Reports</h1>
 
-    <!-- Summary -->
-    <div class="a-summary-cards" style="margin-bottom:1.5rem;">
+    <!-- Summary Cards -->
+    <div class="a-summary-cards">
       <div class="a-summary-card">
         <div class="a-summary-icon a-summary-icon-blue">
           <i class="bi bi-chat-square-text"></i>
@@ -50,7 +51,7 @@ $total     = (int)$db->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
           <i class="bi bi-star-fill"></i>
         </div>
         <div>
-          <div class="a-summary-val"><?= $avgRating ? number_format($avgRating, 1) : '—' ?></div>
+          <div class="a-summary-val"><?= $avgRating ? number_format($avgRating,1) : '—' ?></div>
           <div class="a-summary-label">Average Rating</div>
         </div>
       </div>
@@ -96,10 +97,10 @@ $total     = (int)$db->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
                     <td><?= htmlspecialchars($f['full_name']) ?></td>
                     <td><?= htmlspecialchars($f['message']) ?></td>
                     <td>
-                      <span style="color:#d97706; font-size:0.85rem; letter-spacing:1px;">
+                      <span class="rating-stars">
                         <?php
                           $r = (int)$f['rating'];
-                          echo str_repeat('&#9733;', $r) . str_repeat('&#9734;', 5 - $r);
+                          echo str_repeat('★', $r) . str_repeat('☆', 5 - $r);
                         ?>
                       </span>
                     </td>
@@ -118,6 +119,7 @@ $total     = (int)$db->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
 
       </div>
     </div>
+
   </div>
 </div>
 
