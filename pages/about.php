@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includes/navbar.php';
 <section class="page-hero">
   <div class="section-container page-hero-content">
     <div class="hero-badge" style="margin: 0 auto 1.25rem; display: inline-flex; color: var(--light); background: rgba(189,232,245,0.15); border: 1px solid rgba(189,232,245,0.30); font-size: 0.78rem; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; padding: 6px 16px; border-radius: 100px;">About the System</div>
-    <h1>UC Computer Laboratory<br>Management System</h1>
+    <h1>UC Computer Laboratory<br> SitIn Management System</h1>
     <p>A centralized platform for the College of Computer Studies to manage laboratory sessions, sit-ins, and student activity with ease and efficiency.</p>
   </div>
 </section>

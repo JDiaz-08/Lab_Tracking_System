@@ -238,7 +238,7 @@ $students = $s->fetchAll();
           <label class="a-mlabel">Year Level *</label>
           <select name="course_level" class="a-minput">
             <?php for($y=1;$y<=5;$y++): ?>
-              <option value="<?= $y ?>"><?= $y ?>th Year</option>
+              <option value="<?= $y ?>"><?= $y ?> Year</option>
             <?php endfor; ?>
           </select>
         </div>

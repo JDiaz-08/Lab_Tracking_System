@@ -269,7 +269,7 @@ $labRooms = ['524','526','528','530','542','Mac Laboratory'];
                         <input type="hidden" name="action" value="logout_sitin">
                         <input type="hidden" name="sit_id" value="<?= (int)$row['id'] ?>">
                         <button type="submit" class="a-btn a-btn-red a-btn-sm">
-                          <i class="bi bi-door-open"></i> Logout
+                          <i class="bi bi-door-open"></i> End Session
                         </button>
                       </form>
                     </td>

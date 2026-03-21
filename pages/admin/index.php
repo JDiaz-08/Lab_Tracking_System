@@ -7,17 +7,32 @@ require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 $db = getDB();
 
+/* ── Handle POST actions ── */
 $annSuccess = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['announcement'])) {
-    $content = trim($_POST['announcement']);
-    if ($content) {
-        $db->prepare("INSERT INTO announcements (title,content) VALUES (?,?)")
-           ->execute(['CCS Admin', $content]);
-        $users = $db->query("SELECT id FROM users")->fetchAll();
-        $ins   = $db->prepare("INSERT INTO notifications (user_id,message) VALUES (?,?)");
-        foreach ($users as $u)
-            $ins->execute([$u['id'], "New announcement: " . mb_substr($content,0,80) . (strlen($content)>80?'…':'')]);
-        $annSuccess = 'Announcement posted successfully.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $postAction = $_POST['post_action'] ?? '';
+
+    /* Post announcement */
+    if ($postAction === 'post_announcement') {
+        $content = trim($_POST['announcement'] ?? '');
+        if ($content) {
+            $db->prepare("INSERT INTO announcements (title,content) VALUES (?,?)")
+               ->execute(['CCS Admin', $content]);
+            $users = $db->query("SELECT id FROM users")->fetchAll();
+            $ins   = $db->prepare("INSERT INTO notifications (user_id,message) VALUES (?,?)");
+            foreach ($users as $u)
+                $ins->execute([$u['id'], "New announcement: " . mb_substr($content,0,80) . (strlen($content)>80?'…':'')]);
+            $annSuccess = 'Announcement posted successfully.';
+        }
+    }
+
+    /* Delete announcement */
+    if ($postAction === 'delete_announcement') {
+        $aid = (int)($_POST['ann_id'] ?? 0);
+        if ($aid > 0) {
+            $db->prepare("DELETE FROM announcements WHERE id = ?")->execute([$aid]);
+            $annSuccess = 'Announcement deleted.';
+        }
     }
 }
 
@@ -34,7 +49,7 @@ $purposes = $db->query("
 ")->fetchAll();
 
 $announcements = $db->query(
-    "SELECT * FROM announcements ORDER BY created_at DESC LIMIT 8"
+    "SELECT * FROM announcements ORDER BY created_at DESC LIMIT 10"
 )->fetchAll();
 
 $recentSitIns = $db->query("
@@ -44,7 +59,7 @@ $recentSitIns = $db->query("
     JOIN users u ON u.id = s.user_id
     WHERE s.logout_time IS NULL
     ORDER BY s.login_time DESC
-    LIMIT 5
+    LIMIT 6
 ")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -56,6 +71,79 @@ $recentSitIns = $db->query("
   <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    .db-stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.75rem; }
+    .db-stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 0.875rem; box-shadow: 0 1px 3px rgba(15,40,84,0.06); transition: box-shadow 0.18s, transform 0.18s; }
+    .db-stat-card:hover { box-shadow: 0 4px 16px rgba(15,40,84,0.10); transform: translateY(-2px); }
+    .db-stat-ico { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    .ico-blue  { background: rgba(37,99,235,0.08);  color: #2563EB; }
+    .ico-green { background: rgba(22,163,74,0.08);  color: #16a34a; }
+    .ico-amber { background: rgba(217,119,6,0.08);  color: #d97706; }
+    .ico-slate { background: rgba(71,85,105,0.08);  color: #475569; }
+    .db-stat-val { font-size: 1.75rem; font-weight: 800; color: #1e293b; line-height: 1; margin-bottom: 2px; }
+    .db-stat-lbl { font-size: 0.70rem; color: #94a3b8; font-weight: 500; }
+
+    .db-main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: start; }
+    .db-col-left  { display: flex; flex-direction: column; gap: 1.25rem; }
+    .db-col-right { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    .db-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1.25rem; }
+    .db-chart-box  { position: relative; height: 200px; display: flex; align-items: center; justify-content: center; }
+    .db-chart-box canvas { max-height: 200px !important; }
+
+    /* Activity */
+    .db-activity-list { padding: 0 1.25rem 0.5rem; }
+    .db-act-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }
+    .db-act-item:last-child { border-bottom: none; }
+    .db-act-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1a3a6b, #2563EB); color: #fff; font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .db-act-name { font-size: 0.83rem; font-weight: 700; color: #1e293b; margin-bottom: 1px; }
+    .db-act-meta { font-size: 0.72rem; color: #94a3b8; }
+    .db-act-time { font-size: 0.70rem; color: #94a3b8; flex-shrink: 0; margin-left: auto; }
+    .db-empty    { padding: 2rem; text-align: center; color: #94a3b8; font-size: 0.83rem; }
+    .db-empty i  { font-size: 1.75rem; display: block; margin-bottom: 0.4rem; opacity: 0.35; }
+
+    /* Quick links */
+    .db-quicklinks { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 1.1rem; }
+    .db-ql-item { display: flex; align-items: center; gap: 8px; padding: 0.65rem 0.875rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.80rem; font-weight: 600; color: #1e293b; background: #fff; text-decoration: none; transition: all 0.15s; }
+    .db-ql-item:hover { background: #f0f4f8; border-color: #2563EB; color: #2563EB; }
+    .db-ql-item i { font-size: 0.9rem; color: #2563EB; }
+
+    /* Announcement form */
+    .db-ann-form { padding: 1.1rem 1.25rem; }
+    .db-ann-ta { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 0.65rem 0.875rem; font-family: 'Outfit', sans-serif; font-size: 0.875rem; resize: vertical; min-height: 85px; outline: none; transition: border-color 0.18s; color: #1e293b; }
+    .db-ann-ta:focus { border-color: #2563EB; }
+    .db-ann-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
+    .db-ann-count { font-size: 0.70rem; color: #94a3b8; }
+
+    /* Announcement list items */
+    .db-ann-divider { margin: 0 1.25rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
+    .db-ann-heading { font-size: 0.70rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.75rem; }
+    .db-ann-list { padding: 0 1.25rem 1.25rem; }
+    .db-ann-item { padding: 0.7rem 0; border-bottom: 1px solid #f1f5f9; position: relative; }
+    .db-ann-item:last-child { border-bottom: none; }
+    .db-ann-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+    .db-ann-date { font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.25rem; flex-shrink: 0; }
+    .db-ann-text { font-size: 0.82rem; color: #1e293b; line-height: 1.55; flex: 1; }
+    /* Delete button for announcement */
+    .db-ann-del {
+      background: none; border: none; cursor: pointer; padding: 3px 5px;
+      border-radius: 5px; color: #cbd5e1; font-size: 0.80rem;
+      transition: all 0.15s; flex-shrink: 0; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px;
+    }
+    .db-ann-del:hover { background: rgba(220,38,38,0.08); color: #dc2626; }
+
+    /* Welcome */
+    .db-welcome { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+    .db-welcome h2 { font-size: 1.3rem; font-weight: 800; color: #1e293b; margin-bottom: 0.15rem; }
+    .db-welcome p  { font-size: 0.82rem; color: #94a3b8; }
+    .db-date-chip { font-size: 0.78rem; color: #64748b; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.38rem 0.875rem; display: flex; align-items: center; gap: 5px; }
+    .db-date-chip i { color: #2563EB; font-size: 0.82rem; }
+
+    @media (max-width: 1100px) { .db-stat-grid { grid-template-columns: repeat(2,1fr); } .db-main-grid { grid-template-columns: 1fr; } .db-col-right { display: grid; grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 640px)  { .db-chart-grid { grid-template-columns: 1fr; } .db-col-right { grid-template-columns: 1fr; } .db-stat-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
 </head>
 <body>
 <?php require_once __DIR__ . '/../../includes/admin-navbar.php'; ?>
@@ -63,208 +151,168 @@ $recentSitIns = $db->query("
 <div class="admin-page">
   <div class="admin-inner">
 
-    <!-- Welcome bar -->
-    <div class="dash-welcome">
-      <div class="dash-welcome-text">
+    <div class="db-welcome">
+      <div>
         <h2>Admin Dashboard</h2>
-        <p>Welcome back. Here's what's happening in the labs today.</p>
+        <p>Welcome back. Here's what's happening in the labs.</p>
       </div>
-      <div class="dash-date">
+      <div class="db-date-chip">
         <i class="bi bi-calendar3"></i>
         <?= date('l, F j, Y') ?>
       </div>
     </div>
 
     <?php if ($annSuccess): ?>
-      <div class="a-flash a-flash-success">
+      <div class="a-flash a-flash-success" style="margin-bottom:1.25rem;">
         <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($annSuccess) ?>
       </div>
     <?php endif; ?>
 
-    <!-- Summary stats -->
-    <div class="dash-summary">
-      <div class="dash-stat">
-        <div class="dash-stat-icon dsi-blue"><i class="bi bi-people-fill"></i></div>
-        <div>
-          <div class="dash-stat-val"><?= $totalStudents ?></div>
-          <div class="dash-stat-label">Registered Students</div>
-        </div>
+    <!-- Stats -->
+    <div class="db-stat-grid">
+      <div class="db-stat-card">
+        <div class="db-stat-ico ico-blue"><i class="bi bi-people-fill"></i></div>
+        <div><div class="db-stat-val"><?= $totalStudents ?></div><div class="db-stat-lbl">Registered Students</div></div>
       </div>
-      <div class="dash-stat">
-        <div class="dash-stat-icon dsi-green"><i class="bi bi-pc-display-horizontal"></i></div>
-        <div>
-          <div class="dash-stat-val"><?= $currentSitIn ?></div>
-          <div class="dash-stat-label">Currently Sit-in</div>
-        </div>
+      <div class="db-stat-card">
+        <div class="db-stat-ico ico-green"><i class="bi bi-pc-display-horizontal"></i></div>
+        <div><div class="db-stat-val"><?= $currentSitIn ?></div><div class="db-stat-lbl">Currently Sit-in</div></div>
       </div>
-      <div class="dash-stat">
-        <div class="dash-stat-icon dsi-yellow"><i class="bi bi-clock-history"></i></div>
-        <div>
-          <div class="dash-stat-val"><?= $totalSitIn ?></div>
-          <div class="dash-stat-label">Total Sit-in Sessions</div>
-        </div>
+      <div class="db-stat-card">
+        <div class="db-stat-ico ico-amber"><i class="bi bi-clock-history"></i></div>
+        <div><div class="db-stat-val"><?= $totalSitIn ?></div><div class="db-stat-lbl">Total Sit-in Sessions</div></div>
       </div>
-      <div class="dash-stat">
-        <div class="dash-stat-icon dsi-slate"><i class="bi bi-calendar-check"></i></div>
-        <div>
-          <div class="dash-stat-val"><?= $totalRes ?></div>
-          <div class="dash-stat-label">Pending Reservations</div>
-        </div>
+      <div class="db-stat-card">
+        <div class="db-stat-ico ico-slate"><i class="bi bi-calendar-check"></i></div>
+        <div><div class="db-stat-val"><?= $totalRes ?></div><div class="db-stat-lbl">Pending Reservations</div></div>
       </div>
     </div>
 
     <!-- Main grid -->
-    <div class="dash-main">
+    <div class="db-main-grid">
 
       <!-- LEFT -->
-      <div class="dash-left">
+      <div class="db-col-left">
 
         <!-- Charts -->
         <div class="a-card">
-          <div class="a-card-header">
-            <i class="bi bi-pie-chart"></i> Session Breakdown by Purpose
-          </div>
-          <div class="a-card-body">
-            <div class="chart-grid">
-              <div><canvas id="purposeChart"></canvas></div>
-              <div><canvas id="labBarChart"></canvas></div>
-            </div>
+          <div class="a-card-header"><i class="bi bi-pie-chart"></i> Session Breakdown by Purpose</div>
+          <div class="db-chart-grid">
+            <div class="db-chart-box"><canvas id="purposeChart"></canvas></div>
+            <div class="db-chart-box"><canvas id="labBarChart"></canvas></div>
           </div>
         </div>
 
-        <!-- Active sit-ins feed -->
+        <!-- Active sit-ins -->
         <div class="a-card">
           <div class="a-card-header">
             <i class="bi bi-activity"></i> Active Sit-in Sessions
             <?php if ($currentSitIn > 0): ?>
-              <span class="a-badge badge-active" style="margin-left:auto;">
-                <?= $currentSitIn ?> active
-              </span>
+              <span class="a-badge badge-active" style="margin-left:auto;"><?= $currentSitIn ?> active</span>
             <?php endif; ?>
           </div>
-          <div class="a-card-body">
-            <?php if (empty($recentSitIns)): ?>
-              <div class="activity-empty">
-                <i class="bi bi-inbox"></i>
-                No active sit-in sessions right now.
-              </div>
-            <?php else: ?>
-              <div class="activity-feed">
-                <?php foreach ($recentSitIns as $si):
-                  $parts    = explode(' ', $si['name']);
-                  $initials = strtoupper(substr($parts[0],0,1) . substr($parts[1] ?? '',0,1));
-                  $elapsed  = round((time() - strtotime($si['login_time'])) / 60);
-                ?>
-                  <div class="activity-item">
-                    <div class="activity-avatar"><?= $initials ?></div>
-                    <div class="activity-info">
-                      <div class="activity-name"><?= htmlspecialchars($si['name']) ?></div>
-                      <div class="activity-meta">
-                        <?= htmlspecialchars($si['student_id']) ?> &middot;
-                        Lab <?= htmlspecialchars($si['lab_room']) ?> &middot;
-                        <?= htmlspecialchars($si['purpose'] ?? '—') ?>
-                      </div>
-                    </div>
-                    <div class="activity-time">
-                      <?= $elapsed < 60 ? $elapsed.'m' : floor($elapsed/60).'h '.($elapsed%60).'m' ?>
-                    </div>
+          <?php if (empty($recentSitIns)): ?>
+            <div class="db-empty"><i class="bi bi-inbox"></i>No active sit-in sessions right now.</div>
+          <?php else: ?>
+            <div class="db-activity-list">
+              <?php foreach ($recentSitIns as $si):
+                $parts    = explode(' ', $si['name']);
+                $initials = strtoupper(substr($parts[0],0,1) . substr($parts[1] ?? '',0,1));
+                $elapsed  = round((time() - strtotime($si['login_time'])) / 60);
+              ?>
+                <div class="db-act-item">
+                  <div class="db-act-avatar"><?= $initials ?></div>
+                  <div style="flex:1;min-width:0;">
+                    <div class="db-act-name"><?= htmlspecialchars($si['name']) ?></div>
+                    <div class="db-act-meta"><?= htmlspecialchars($si['student_id']) ?> &middot; Lab <?= htmlspecialchars($si['lab_room']) ?> &middot; <?= htmlspecialchars($si['purpose'] ?? '—') ?></div>
                   </div>
-                <?php endforeach; ?>
-              </div>
-              <?php if ($currentSitIn > 5): ?>
-                <div style="padding-top:0.65rem; text-align:right;">
-                  <a href="<?= $base ?>pages/admin/sitin.php" class="activity-more-link">
-                    View all <?= $currentSitIn ?> sessions <i class="bi bi-arrow-right"></i>
-                  </a>
+                  <div class="db-act-time"><?= $elapsed < 60 ? $elapsed.'m' : floor($elapsed/60).'h '.($elapsed%60).'m' ?></div>
                 </div>
-              <?php endif; ?>
+              <?php endforeach; ?>
+            </div>
+            <?php if ($currentSitIn > 6): ?>
+              <div style="padding:0.75rem 1.25rem;border-top:1px solid #f1f5f9;text-align:right;">
+                <a href="<?= $base ?>pages/admin/sitin.php" style="font-size:0.78rem;color:#2563EB;font-weight:600;text-decoration:none;">View all <?= $currentSitIn ?> sessions <i class="bi bi-arrow-right"></i></a>
+              </div>
             <?php endif; ?>
-          </div>
+          <?php endif; ?>
         </div>
 
       </div>
 
       <!-- RIGHT -->
-      <div class="dash-right">
+      <div class="db-col-right">
 
         <!-- Quick links -->
         <div class="a-card">
-          <div class="a-card-header">
-            <i class="bi bi-grid"></i> Quick Access
-          </div>
-          <div class="a-card-body">
-            <div class="quick-links">
-              <a href="<?= $base ?>pages/admin/sitin.php" class="quick-link-item">
-                <i class="bi bi-pc-display"></i> Sit-in
-              </a>
-              <a href="<?= $base ?>pages/admin/students.php" class="quick-link-item">
-                <i class="bi bi-people"></i> Students
-              </a>
-              <a href="<?= $base ?>pages/admin/reservation.php" class="quick-link-item">
-                <i class="bi bi-calendar-check"></i> Reservations
-              </a>
-              <a href="<?= $base ?>pages/admin/sitin-reports.php" class="quick-link-item">
-                <i class="bi bi-bar-chart-line"></i> Reports
-              </a>
-              <a href="<?= $base ?>pages/admin/view-sitin.php" class="quick-link-item">
-                <i class="bi bi-table"></i> Records
-              </a>
-              <a href="<?= $base ?>pages/admin/feedback.php" class="quick-link-item">
-                <i class="bi bi-chat-square-text"></i> Feedback
-              </a>
-            </div>
+          <div class="a-card-header"><i class="bi bi-grid"></i> Quick Access</div>
+          <div class="db-quicklinks">
+            <a href="<?= $base ?>pages/admin/sitin.php" class="db-ql-item"><i class="bi bi-pc-display"></i> Sit-in</a>
+            <a href="<?= $base ?>pages/admin/students.php" class="db-ql-item"><i class="bi bi-people"></i> Students</a>
+            <a href="<?= $base ?>pages/admin/reservation.php" class="db-ql-item"><i class="bi bi-calendar-check"></i> Reservations</a>
+            <a href="<?= $base ?>pages/admin/sitin-reports.php" class="db-ql-item"><i class="bi bi-bar-chart-line"></i> Reports</a>
+            <a href="<?= $base ?>pages/admin/view-sitin.php" class="db-ql-item"><i class="bi bi-table"></i> Records</a>
+            <a href="<?= $base ?>pages/admin/feedback.php" class="db-ql-item"><i class="bi bi-chat-square-text"></i> Feedback</a>
           </div>
         </div>
 
         <!-- Announcement form -->
         <div class="a-card">
-          <div class="a-card-header">
-            <i class="bi bi-megaphone"></i> Post Announcement
-          </div>
-          <div class="a-card-body">
+          <div class="a-card-header"><i class="bi bi-megaphone"></i> Post Announcement</div>
+          <div class="db-ann-form">
             <form method="POST" action="">
+              <input type="hidden" name="post_action" value="post_announcement">
               <textarea
                 name="announcement"
-                class="a-ann-textarea"
+                class="db-ann-ta"
                 placeholder="Write an announcement for all students..."
                 maxlength="500"
                 oninput="document.getElementById('annCount').textContent = this.value.length"
               ></textarea>
-              <div class="ann-form-row">
-                <span class="ann-char-hint"><span id="annCount">0</span> / 500</span>
+              <div class="db-ann-meta">
+                <span class="db-ann-count"><span id="annCount">0</span> / 500</span>
                 <button type="submit" class="a-btn a-btn-primary">
                   <i class="bi bi-send"></i> Post
                 </button>
               </div>
             </form>
+          </div>
 
-            <div class="ann-posted-divider">
-              <div class="ann-posted-heading">
-                <i class="bi bi-clock-history"></i> Recent Announcements
-              </div>
-              <?php if (empty($announcements)): ?>
-                <div class="ann-empty">
-                  <i class="bi bi-megaphone"></i>
-                  No announcements posted yet.
-                </div>
-              <?php else: ?>
-                <div class="ann-posted-list">
-                  <?php foreach ($announcements as $ann): ?>
-                    <div class="ann-posted-item">
-                      <div class="ann-posted-meta">
-                        <i class="bi bi-person-circle"></i>
-                        CCS Admin &nbsp;&middot;&nbsp;
+          <!-- Posted announcements with delete buttons -->
+          <div class="db-ann-divider">
+            <div class="db-ann-heading">Recent Announcements</div>
+          </div>
+
+          <?php if (empty($announcements)): ?>
+            <div class="db-empty" style="padding:1.25rem;">
+              <i class="bi bi-megaphone"></i>No announcements posted yet.
+            </div>
+          <?php else: ?>
+            <div class="db-ann-list">
+              <?php foreach ($announcements as $ann): ?>
+                <div class="db-ann-item">
+                  <div class="db-ann-item-top">
+                    <div style="flex:1;">
+                      <div class="db-ann-date">
+                        <i class="bi bi-clock" style="font-size:0.65rem;"></i>
                         <?= date('M j, Y · g:i A', strtotime($ann['created_at'])) ?>
                       </div>
-                      <div class="ann-posted-content">
-                        <?= nl2br(htmlspecialchars($ann['content'])) ?>
-                      </div>
+                      <div class="db-ann-text"><?= nl2br(htmlspecialchars($ann['content'])) ?></div>
                     </div>
-                  <?php endforeach; ?>
+                    <!-- Delete button -->
+                    <form method="POST" action="" style="margin:0;"
+                          onsubmit="return confirm('Delete this announcement?')">
+                      <input type="hidden" name="post_action" value="delete_announcement">
+                      <input type="hidden" name="ann_id" value="<?= (int)$ann['id'] ?>">
+                      <button type="submit" class="db-ann-del" title="Delete announcement">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </form>
+                  </div>
                 </div>
-              <?php endif; ?>
+              <?php endforeach; ?>
             </div>
-          </div>
+          <?php endif; ?>
         </div>
 
       </div>
@@ -274,6 +322,7 @@ $recentSitIns = $db->query("
 </div>
 
 <script>
+Chart.defaults.font.family = 'Outfit';
 const purposes = <?= json_encode(array_column($purposes,'purpose')) ?>;
 const counts   = <?= json_encode(array_column($purposes,'cnt')) ?>;
 const palette  = ['#1a3a6b','#2563EB','#4988C4','#93c5fd','#1C4D8D','#0891b2','#475569'];
@@ -284,26 +333,23 @@ new Chart(document.getElementById('purposeChart'), {
   type: 'doughnut',
   data: {
     labels: purposes.length ? purposes : demoLabels,
-    datasets: [{
-      data: purposes.length ? counts : demoData,
-      backgroundColor: palette, borderWidth: 2, borderColor: '#fff', hoverOffset: 6
-    }]
+    datasets: [{ data: purposes.length ? counts : demoData, backgroundColor: palette, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
   },
-  options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { font: { family:'Outfit',size:10 }, padding:10 } } } }
+  options: { responsive: true, maintainAspectRatio: true, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 10, boxWidth: 10 } } } }
 });
 
 new Chart(document.getElementById('labBarChart'), {
   type: 'bar',
   data: {
     labels: purposes.length ? purposes : demoLabels,
-    datasets: [{ label:'Sessions', data: purposes.length ? counts : demoData, backgroundColor:'#2563EB', borderRadius:5, barThickness:22 }]
+    datasets: [{ label: 'Sessions', data: purposes.length ? counts : demoData, backgroundColor: '#2563EB', borderRadius: 5, barThickness: 18 }]
   },
   options: {
-    responsive: true, indexAxis: 'y',
+    responsive: true, maintainAspectRatio: true, indexAxis: 'y',
     plugins: { legend: { display: false } },
     scales: {
-      x: { beginAtZero:true, ticks:{ stepSize:1, font:{family:'Outfit',size:10} } },
-      y: { ticks:{ font:{family:'Outfit',size:10} } }
+      x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#f1f5f9' } },
+      y: { ticks: { font: { size: 10 } }, grid: { display: false } }
     }
   }
 });

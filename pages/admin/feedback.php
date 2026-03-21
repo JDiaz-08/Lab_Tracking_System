@@ -17,15 +17,51 @@ $feedbacks = $db->query("
 
 $avgRating = $db->query("SELECT AVG(rating) FROM feedback")->fetchColumn();
 $total     = (int)$db->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
+$fiveStar  = (int)$db->query("SELECT COUNT(*) FROM feedback WHERE rating = 5")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Feedback Reports — UC CompLab Admin</title>
+  <title>Feedback — UC CompLab Admin</title>
   <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+  <style>
+    .fb-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .fb-stat-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 1px 3px rgba(15,40,84,0.06);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .fb-stat-ico {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .fb-val { font-size: 1.75rem; font-weight: 800; color: #1e293b; line-height: 1; margin-bottom: 2px; }
+    .fb-lbl { font-size: 0.70rem; color: #94a3b8; font-weight: 500; }
+
+    .rating-stars-full  { color: #d97706; font-size: 0.88rem; letter-spacing: 1.5px; }
+    .rating-stars-empty { color: #e2e8f0; font-size: 0.88rem; letter-spacing: 1.5px; }
+    .rating-cell { display: flex; align-items: center; gap: 6px; }
+    .rating-num  { font-size: 0.75rem; font-weight: 700; color: #64748b; }
+
+    @media (max-width: 720px) {
+      .fb-stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
 </head>
 <body>
 <?php require_once __DIR__ . '/../../includes/admin-navbar.php'; ?>
@@ -35,31 +71,44 @@ $total     = (int)$db->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
 
     <h1 class="a-page-title">Feedback Reports</h1>
 
-    <!-- Summary Cards -->
-    <div class="a-summary-cards">
-      <div class="a-summary-card">
-        <div class="a-summary-icon a-summary-icon-blue">
+    <!-- Stats -->
+    <div class="fb-stat-grid">
+      <div class="fb-stat-card">
+        <div class="fb-stat-ico" style="background:rgba(37,99,235,0.08); color:#2563EB;">
           <i class="bi bi-chat-square-text"></i>
         </div>
         <div>
-          <div class="a-summary-val"><?= $total ?></div>
-          <div class="a-summary-label">Total Feedback</div>
+          <div class="fb-val"><?= $total ?></div>
+          <div class="fb-lbl">Total Feedback</div>
         </div>
       </div>
-      <div class="a-summary-card">
-        <div class="a-summary-icon a-summary-icon-yellow">
+      <div class="fb-stat-card">
+        <div class="fb-stat-ico" style="background:rgba(217,119,6,0.08); color:#d97706;">
           <i class="bi bi-star-fill"></i>
         </div>
         <div>
-          <div class="a-summary-val"><?= $avgRating ? number_format($avgRating,1) : '—' ?></div>
-          <div class="a-summary-label">Average Rating</div>
+          <div class="fb-val"><?= $avgRating ? number_format($avgRating,1) : '—' ?></div>
+          <div class="fb-lbl">Average Rating</div>
+        </div>
+      </div>
+      <div class="fb-stat-card">
+        <div class="fb-stat-ico" style="background:rgba(22,163,74,0.08); color:#16a34a;">
+          <i class="bi bi-hand-thumbs-up"></i>
+        </div>
+        <div>
+          <div class="fb-val"><?= $fiveStar ?></div>
+          <div class="fb-lbl">5-Star Ratings</div>
         </div>
       </div>
     </div>
 
+    <!-- Table -->
     <div class="a-card">
       <div class="a-card-header">
         <i class="bi bi-chat-square-text"></i> All Feedback
+        <?php if ($total > 0): ?>
+          <span class="a-badge badge-active" style="margin-left:auto;"><?= $total ?> total</span>
+        <?php endif; ?>
       </div>
       <div class="a-card-body">
 
@@ -95,14 +144,21 @@ $total     = (int)$db->query("SELECT COUNT(*) FROM feedback")->fetchColumn();
                   <tr class="a-data-row">
                     <td><?= htmlspecialchars($f['student_id']) ?></td>
                     <td><?= htmlspecialchars($f['full_name']) ?></td>
-                    <td><?= htmlspecialchars($f['message']) ?></td>
+                    <td style="max-width:280px; white-space:normal; line-height:1.5;">
+                      <?= htmlspecialchars($f['message']) ?>
+                    </td>
                     <td>
-                      <span class="rating-stars">
-                        <?php
-                          $r = (int)$f['rating'];
-                          echo str_repeat('★', $r) . str_repeat('☆', 5 - $r);
-                        ?>
-                      </span>
+                      <div class="rating-cell">
+                        <span class="rating-stars-full">
+                          <?= str_repeat('★', (int)$f['rating']) ?>
+                        </span>
+                        <?php if ((int)$f['rating'] < 5): ?>
+                          <span class="rating-stars-empty">
+                            <?= str_repeat('★', 5 - (int)$f['rating']) ?>
+                          </span>
+                        <?php endif; ?>
+                        <span class="rating-num"><?= (int)$f['rating'] ?>/5</span>
+                      </div>
                     </td>
                     <td><?= date('M j, Y', strtotime($f['created_at'])) ?></td>
                   </tr>

@@ -21,14 +21,25 @@ function _navActive(string $file): string {
     return $_currentFile === $file ? 'active' : '';
 }
 ?>
+<style>
+/* ── User navbar logo ── */
+.user-nav-logo-img {
+  height: 30px; width: auto; object-fit: contain;
+  filter: brightness(0) invert(1); opacity: 0.88; flex-shrink: 0;
+}
+.user-brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+.user-brand-name { font-size: 0.80rem; font-weight: 700; color: #fff; letter-spacing: 0.15px; white-space: nowrap; }
+.user-brand-sub  { font-size: 0.60rem; color: rgba(189,232,245,0.58); letter-spacing: 0.3px; }
+</style>
+
 <nav class="user-navbar">
   <div class="user-nav-container">
 
     <a href="<?= $base ?>pages/dashboard.php" class="user-nav-brand">
-      <div class="user-nav-badge">UC</div>
-      <div class="logo-text">
-        <span class="org-name">UC CompLab</span>
-        <span class="org-sub">Management System</span>
+      <img src="<?= $base ?>assets/images/uc-logo-white.png" alt="UC" class="user-nav-logo-img" />
+      <div class="user-brand-text">
+        <span class="user-brand-name">UC CompLab</span>
+        <span class="user-brand-sub">SitIn Management System</span>
       </div>
     </a>
 

@@ -79,16 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
     }
-    elseif ($action === 'forgot') {
-        $activeTab = 'forgot';
-        $email = trim($_POST['email'] ?? '');
-        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Please enter a valid email address.';
-        } else {
-            $success   = 'If that email is registered, a reset link has been sent.';
-            $activeTab = 'login';
-        }
-    }
 }
 
 $pageTitle = 'Login';
@@ -100,15 +90,17 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 <div class="auth-page">
   <div class="auth-wrapper">
 
+    <!-- Left panel -->
     <div class="auth-left">
       <div class="ccs-logo-wrap">
         <img src="<?= $base ?>assets/images/ccs-logo.png" alt="CCS Logo" class="ccs-real-logo" />
         <span class="ccs-label">College of Computer Studies</span>
       </div>
-      <h2>UC Computer Laboratory System</h2>
-      <p>Log in to access the laboratory management portal. Track sit-in sessions, check lab availability, and manage your academic computer laboratory usage.</p>
+      <h2>UC Sit In Management System</h2>
+      <p>Log in to access the laboratory management portal. Track sit-in sessions, check lab availability, and manage your computer laboratory usage.</p>
     </div>
 
+    <!-- Right panel -->
     <div class="auth-right">
 
       <?php if ($success): ?>
@@ -124,10 +116,10 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
         </div>
       <?php endif; ?>
 
+      <!-- Tabs: Login + Register only -->
       <div class="auth-tabs">
         <button class="tab-btn <?= $activeTab === 'login'    ? 'active' : '' ?>" data-tab="login">Login</button>
         <button class="tab-btn <?= $activeTab === 'register' ? 'active' : '' ?>" data-tab="register">Register</button>
-        <button class="tab-btn <?= $activeTab === 'forgot'   ? 'active' : '' ?>" data-tab="forgot">Forgot</button>
       </div>
 
       <!-- LOGIN -->
@@ -151,7 +143,6 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
             <label class="remember-me">
               <input type="checkbox" name="remember" /> Remember me
             </label>
-            <span class="forgot-link">Forgot password?</span>
           </div>
           <button type="submit" class="btn-submit">Sign In</button>
           <div class="divider">or</div>
@@ -232,23 +223,6 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
           <p class="terms-text">By registering, you agree to the <a href="#">Terms of Use</a> and <a href="#">Privacy Policy</a>.</p>
           <div class="divider">or</div>
           <p class="switch-auth">Already have an account? <a data-switch="login">Sign in</a></p>
-        </form>
-      </div>
-
-      <!-- FORGOT -->
-      <div class="auth-panel <?= $activeTab === 'forgot' ? 'active' : '' ?>" id="panel-forgot">
-        <h3>Reset Password</h3>
-        <p class="sub-text">We'll send a reset link to your registered email.</p>
-        <div class="alert alert-info">Enter your university email address and we'll send instructions to reset your password.</div>
-        <form method="POST" action="">
-          <input type="hidden" name="action" value="forgot">
-          <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" name="email" placeholder="juandelacruz@gmail.com" required />
-          </div>
-          <button type="submit" class="btn-submit">Send Reset Link</button>
-          <div class="divider">or</div>
-          <p class="switch-auth">Remember your password? <a data-switch="login">Back to Login</a></p>
         </form>
       </div>
 
