@@ -9,9 +9,16 @@ $_initials    = strtoupper(
     substr($_currentUser['last_name']  ?? '',  0, 1)
 );
 
+/* ── FIX: strip ?mark_read=1 from redirect URL to prevent infinite loop ── */
 if (isset($_GET['mark_read']) && isset($db)) {
     markAllRead($db);
-    header('Location: ' . $_SERVER['REQUEST_URI']);
+    $cleanUrl = strtok($_SERVER['REQUEST_URI'], '?');
+    $leftover = $_GET;
+    unset($leftover['mark_read']);
+    if (!empty($leftover)) {
+        $cleanUrl .= '?' . http_build_query($leftover);
+    }
+    header('Location: ' . $cleanUrl);
     exit;
 }
 
