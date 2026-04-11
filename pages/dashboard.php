@@ -377,7 +377,7 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 
       <!-- COL 2: Announcements -->
       <div class="dash-ann-col">
-        <div class="dash-card" style="height:100%;">
+        <div class="dash-card" style="height: 568px">
           <div class="dash-card-head">
             <div class="dash-card-ico"><i class="bi bi-megaphone"></i></div>
             <span class="dash-card-title">Announcements</span>
