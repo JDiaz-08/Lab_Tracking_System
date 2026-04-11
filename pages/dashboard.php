@@ -54,190 +54,218 @@ require_once __DIR__ . '/../includes/header.php';
 echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 ?>
 <style>
-/* ── Dashboard fixes ── */
-.dash-layout {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 1.5rem;
-  align-items: start;
-}
-.dash-sidebar { display: flex; flex-direction: column; gap: 1rem; }
+/* ════════════════════════════════════════
+   DASHBOARD — 3-column layout
+════════════════════════════════════════ */
 
-/* Profile card */
-.dash-profile {
-  background: linear-gradient(160deg, #0F2854 0%, #1C4D8D 100%);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(15,40,84,0.16);
-}
-.dash-profile-top {
-  padding: 1.75rem 1.25rem 1.25rem;
-  text-align: center;
-  position: relative;
-}
-.dash-profile-top::after {
-  content: '';
-  position: absolute;
-  top: -30px; right: -30px;
-  width: 100px; height: 100px;
-  border-radius: 50%;
-  background: rgba(189,232,245,0.06);
-  pointer-events: none;
-}
-.dash-avatar {
-  width: 68px; height: 68px;
-  border-radius: 50%;
-  border: 2px solid rgba(189,232,245,0.30);
-  margin: 0 auto 0.875rem;
-  overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(189,232,245,0.12);
-  font-family: var(--font-display);
-  font-size: 1.4rem; font-weight: 800;
-  color: #BDE8F5;
-  position: relative; z-index: 1;
-}
-.dash-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.dash-profile-name {
-  font-family: var(--font-display);
-  font-size: 0.95rem; font-weight: 700;
-  color: #fff; margin-bottom: 0.15rem;
-  position: relative; z-index: 1;
-}
-.dash-profile-id {
-  font-size: 0.70rem; color: rgba(189,232,245,0.60);
-  letter-spacing: 0.5px; position: relative; z-index: 1;
-}
-.dash-profile-info {
-  border-top: 1px solid rgba(189,232,245,0.10);
-  padding: 0.875rem 1.25rem;
-  display: flex; flex-direction: column; gap: 0.65rem;
-}
-.dash-info-row { display: flex; align-items: flex-start; gap: 9px; }
-.dash-info-icon {
-  width: 22px; height: 22px;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(189,232,245,0.50); font-size: 0.78rem;
-  flex-shrink: 0; margin-top: 1px;
-}
-.dash-info-label {
-  font-size: 0.62rem; font-weight: 700;
-  letter-spacing: 0.8px; text-transform: uppercase;
-  color: rgba(189,232,245,0.45); margin-bottom: 1px;
-}
-.dash-info-val { font-size: 0.82rem; color: #fff; font-weight: 500; word-break: break-word; }
-.dash-profile-foot {
-  border-top: 1px solid rgba(189,232,245,0.08);
-  padding: 0.55rem 1.25rem;
-  font-size: 0.67rem; color: rgba(189,232,245,0.35);
-  text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px;
-}
-
-/* Sessions widget */
-.dash-sessions-widget {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.1rem 1.25rem;
-  box-shadow: 0 1px 4px rgba(15,40,84,0.05);
-}
-.dash-sess-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 0.875rem;
-}
-.dash-sess-label {
-  font-size: 0.65rem; font-weight: 700;
-  letter-spacing: 1.2px; text-transform: uppercase; color: var(--mid);
-}
-.dash-sess-link {
-  font-size: 0.72rem; color: var(--mid); font-weight: 600;
-  text-decoration: none; display: flex; align-items: center; gap: 3px;
-}
-.dash-sess-link:hover { color: var(--navy); }
-.dash-sess-num {
-  font-family: var(--font-display);
-  font-size: 2.4rem; font-weight: 800; color: var(--navy);
-  line-height: 1; margin-bottom: 2px;
-}
-.dash-sess-sub { font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.75rem; }
-.dash-sess-bar { background: #f1f5f9; border-radius: 100px; height: 6px; overflow: hidden; }
-.dash-sess-fill { height: 100%; border-radius: 100px; transition: width 0.6s ease; }
-
-/* Active banner */
+/* Active session banner */
 .dash-active-banner {
   background: rgba(22,163,74,0.06);
   border: 1px solid rgba(22,163,74,0.18);
   border-radius: 10px;
   padding: 0.8rem 1rem;
   display: flex; align-items: center; gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
-@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.4); } 50% { box-shadow: 0 0 0 5px rgba(22,163,74,0); } }
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.4); }
+  50%      { box-shadow: 0 0 0 5px rgba(22,163,74,0); }
+}
 .active-dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: #16a34a; flex-shrink: 0;
   animation: pulse-dot 2s infinite;
 }
-.active-info { flex: 1; }
+.active-info  { flex: 1; }
 .active-title { font-size: 0.82rem; font-weight: 700; color: #065F46; margin-bottom: 1px; }
 .active-meta  { font-size: 0.72rem; color: #16a34a; }
 .active-link  { font-size: 0.75rem; font-weight: 700; color: #065F46; text-decoration: none; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 
-/* Main content */
-.dash-main-col { display: flex; flex-direction: column; gap: 1.25rem; }
-.dash-card {
-  background: #fff; border: 1px solid #e2e8f0;
-  border-radius: 14px; box-shadow: 0 1px 4px rgba(15,40,84,0.05);
-  overflow: hidden;
+/* ── 3-column grid ── */
+.dash-3col {
+  display: grid;
+  grid-template-columns: 240px 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
 }
+
+/* ── Profile card (col 1) ── */
+.dash-profile {
+  background: linear-gradient(160deg, #0F2854 0%, #1C4D8D 100%);
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(15,40,84,0.16);
+}
+.dash-profile-top {
+  padding: 1.5rem 1.25rem 1.1rem;
+  text-align: center; position: relative;
+}
+.dash-profile-top::after {
+  content: '';
+  position: absolute; top: -30px; right: -30px;
+  width: 100px; height: 100px; border-radius: 50%;
+  background: rgba(189,232,245,0.06); pointer-events: none;
+}
+.dash-avatar {
+  width: 68px; height: 68px; border-radius: 50%;
+  border: 2px solid rgba(189,232,245,0.30);
+  margin: 0 auto 0.75rem; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(189,232,245,0.12);
+  font-family: var(--font-display);
+  font-size: 1.4rem; font-weight: 800; color: #BDE8F5;
+  position: relative; z-index: 1;
+}
+.dash-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.dash-profile-name {
+  font-family: var(--font-display);
+  font-size: 0.92rem; font-weight: 700; color: #fff;
+  margin-bottom: 0.15rem; position: relative; z-index: 1;
+}
+.dash-profile-id {
+  font-size: 0.68rem; color: rgba(189,232,245,0.60);
+  letter-spacing: 0.5px; position: relative; z-index: 1;
+}
+.dash-profile-info {
+  border-top: 1px solid rgba(189,232,245,0.10);
+  padding: 0.875rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.6rem;
+}
+.dash-info-row { display: flex; align-items: flex-start; gap: 9px; }
+.dash-info-icon {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(189,232,245,0.50); font-size: 0.75rem;
+  flex-shrink: 0; margin-top: 1px;
+}
+.dash-info-label {
+  font-size: 0.60rem; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  color: rgba(189,232,245,0.45); margin-bottom: 1px;
+}
+.dash-info-val { font-size: 0.80rem; color: #fff; font-weight: 500; word-break: break-word; }
+.dash-profile-foot {
+  border-top: 1px solid rgba(189,232,245,0.08);
+  padding: 0.5rem 1.25rem;
+  font-size: 0.65rem; color: rgba(189,232,245,0.35);
+  text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+
+/* Sessions widget under profile */
+.dash-sessions-widget {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 12px; padding: 1rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(15,40,84,0.05);
+  margin-top: 1rem;
+}
+.dash-sess-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.dash-sess-label {
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--mid);
+}
+.dash-sess-link {
+  font-size: 0.70rem; color: var(--mid); font-weight: 600;
+  text-decoration: none; display: flex; align-items: center; gap: 3px;
+}
+.dash-sess-link:hover { color: var(--navy); }
+.dash-sess-num {
+  font-family: var(--font-display);
+  font-size: 2.2rem; font-weight: 800; color: var(--navy);
+  line-height: 1; margin-bottom: 2px;
+}
+.dash-sess-sub { font-size: 0.70rem; color: #94a3b8; margin-bottom: 0.65rem; }
+.dash-sess-bar { background: #f1f5f9; border-radius: 100px; height: 6px; overflow: hidden; }
+.dash-sess-fill { height: 100%; border-radius: 100px; transition: width 0.6s ease; }
+
+/* ── Base card (col 2 & 3) ── */
+.dash-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(15,40,84,0.05);
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .dash-card-head {
   display: flex; align-items: center; gap: 9px;
-  padding: 1rem 1.35rem; border-bottom: 1px solid #f1f5f9;
+  padding: 0.9rem 1.25rem; border-bottom: 1px solid #f1f5f9;
 }
 .dash-card-ico {
-  width: 30px; height: 30px; border-radius: 7px;
+  width: 28px; height: 28px; border-radius: 7px;
   background: rgba(15,40,84,0.05);
   display: flex; align-items: center; justify-content: center;
-  color: var(--navy); font-size: 0.85rem; flex-shrink: 0;
+  color: var(--navy); font-size: 0.82rem; flex-shrink: 0;
 }
-.dash-card-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 800; color: var(--navy); }
-.dash-card-body { padding: 1.25rem 1.35rem; }
+.dash-card-title { font-family: var(--font-display); font-size: 0.92rem; font-weight: 800; color: var(--navy); }
+.dash-card-body {
+  padding: 1.1rem 1.25rem;
+
+  flex: 1;
+  overflow-y: auto;
+}
+
+.dash-rules-col .dash-card-body {
+  max-height: 510px; /* adjust if needed */
+}
+
+.dash-card-body::-webkit-scrollbar {
+  width: 6px;
+}
+.dash-card-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
 
 /* Announcements */
-.ann-list  { display: flex; flex-direction: column; gap: 0.875rem; }
-.ann-item  { padding: 0.875rem 1rem; background: #f8fafc; border-radius: 9px; border-left: 3px solid var(--mid); }
-.ann-title { font-size: 0.875rem; font-weight: 700; color: var(--navy); margin-bottom: 0.3rem; }
-.ann-body  { font-size: 0.83rem; color: #475569; line-height: 1.65; font-weight: 300; }
-.ann-meta  { font-size: 0.68rem; color: #94a3b8; margin-top: 0.4rem; display: flex; align-items: center; gap: 4px; }
+.ann-list  { display: flex; flex-direction: column; gap: 0.75rem; }
+.ann-item  {
+  padding: 0.8rem 0.875rem; background: #f8fafc;
+  border-radius: 9px; border-left: 3px solid var(--mid);
+}
+.ann-title { font-size: 0.83rem; font-weight: 700; color: var(--navy); margin-bottom: 0.25rem; }
+.ann-body  { font-size: 0.80rem; color: #475569; line-height: 1.6; font-weight: 300; }
+.ann-meta  { font-size: 0.67rem; color: #94a3b8; margin-top: 0.35rem; display: flex; align-items: center; gap: 4px; }
+.ann-meta i { font-size: 0.67rem; }
 .ann-empty { text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.875rem; }
 .ann-empty i { font-size: 1.75rem; display: block; margin-bottom: 0.5rem; opacity: 0.4; }
 
 /* Rules */
-.rules-header { text-align: center; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #f1f5f9; }
-.rules-org    { font-size: 0.875rem; font-weight: 700; color: var(--navy); }
-.rules-dept   { font-size: 0.83rem; font-weight: 700; color: var(--navy); margin-top: 1px; }
-.rules-sub    { font-size: 0.70rem; font-weight: 700; color: var(--mid); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-.rules-intro  { font-size: 0.80rem; color: #475569; font-weight: 300; margin-top: 0.5rem; line-height: 1.65; max-width: 520px; margin-left: auto; margin-right: auto; }
-.rules-list   { display: flex; flex-direction: column; gap: 0.65rem; }
-.rule-row     { display: flex; gap: 10px; align-items: flex-start; }
-.rule-num     { width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
-.rule-txt     { font-size: 0.83rem; color: #475569; line-height: 1.65; font-weight: 300; }
-.rule-sub-list { margin-left: 2.2rem; margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.25rem; }
-.rule-sub-list li { font-size: 0.82rem; color: #475569; font-weight: 300; line-height: 1.6; list-style: disc; padding-left: 2px; }
-.disc-box { margin-top: 1.25rem; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12); border-radius: 9px; padding: 0.9rem 1rem; }
-.disc-box-title { font-size: 0.68rem; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #991b1b; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 6px; }
-.disc-item { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 0.45rem; }
+.rules-header { text-align: center; margin-bottom: 1rem; padding-bottom: 0.875rem; border-bottom: 1px solid #f1f5f9; }
+.rules-org    { font-size: 0.83rem; font-weight: 700; color: var(--navy); }
+.rules-dept   { font-size: 0.80rem; font-weight: 700; color: var(--navy); margin-top: 1px; }
+.rules-sub    { font-size: 0.67rem; font-weight: 700; color: var(--mid); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+.rules-intro  { font-size: 0.77rem; color: #475569; font-weight: 300; margin-top: 0.45rem; line-height: 1.6; }
+.rules-list   { display: flex; flex-direction: column; gap: 0.55rem; }
+.rule-row     { display: flex; gap: 9px; align-items: flex-start; }
+.rule-num     { width: 20px; height: 20px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 0.62rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.rule-txt     { font-size: 0.80rem; color: #475569; line-height: 1.6; font-weight: 300; }
+.rule-sub-list { margin-left: 2rem; margin-top: 0.3rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.rule-sub-list li { font-size: 0.79rem; color: #475569; font-weight: 300; line-height: 1.55; list-style: disc; padding-left: 2px; }
+.disc-box { margin-top: 1rem; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12); border-radius: 9px; padding: 0.8rem 0.875rem; }
+.disc-box-title { font-size: 0.67rem; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #991b1b; margin-bottom: 0.55rem; display: flex; align-items: center; gap: 6px; }
+.disc-item { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 0.4rem; }
 .disc-item:last-child { margin-bottom: 0; }
 .disc-dot   { width: 8px; height: 8px; border-radius: 50%; background: #dc2626; flex-shrink: 0; margin-top: 5px; }
 .disc-dot-2 { background: #991b1b; }
-.disc-item p { font-size: 0.83rem; color: #475569; font-weight: 300; line-height: 1.6; }
+.disc-item p { font-size: 0.80rem; color: #475569; font-weight: 300; line-height: 1.6; }
 
-@media (max-width: 960px) {
-  .dash-layout  { grid-template-columns: 1fr; }
-  .dash-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .dash-3col { grid-template-columns: 220px 1fr; }
+  .dash-3col .dash-rules-col {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+  }
 }
-@media (max-width: 640px) {
-  .dash-sidebar { grid-template-columns: 1fr; }
+@media (max-width: 820px) {
+  .dash-3col { grid-template-columns: 1fr; }
+  .dash-3col .dash-rules-col { grid-column: auto; grid-row: auto; }
 }
 </style>
 <?php require_once __DIR__ . '/../includes/user-navbar.php'; ?>
@@ -245,13 +273,15 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 <div class="user-page">
   <div class="user-page-inner">
 
-    <div class="page-heading" style="margin-bottom:1.5rem;">
-      <h1 style="font-family:var(--font-display); font-size:1.55rem; font-weight:800; color:var(--navy); margin-bottom:0.2rem;">
+    <!-- Page heading -->
+    <div style="margin-bottom:1.25rem;">
+      <h1 style="font-family:var(--font-display); font-size:1.45rem; font-weight:800; color:var(--navy); margin-bottom:0.2rem;">
         Welcome back, <?= htmlspecialchars($user['first_name']) ?>
       </h1>
       <p style="color:#94a3b8; font-size:0.875rem;"><?= date('l, F j, Y') ?></p>
     </div>
 
+    <!-- Active session banner -->
     <?php if ($activeSitIn): ?>
       <?php $elapsed = round((time() - strtotime($activeSitIn['login_time'])) / 60); ?>
       <div class="dash-active-banner">
@@ -270,10 +300,11 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
       </div>
     <?php endif; ?>
 
-    <div class="dash-layout">
+    <!-- ══ 3-COLUMN LAYOUT ══ -->
+    <div class="dash-3col">
 
-      <!-- SIDEBAR -->
-      <div class="dash-sidebar">
+      <!-- COL 1: Profile + Sessions -->
+      <div class="dash-profile-col">
 
         <div class="dash-profile">
           <div class="dash-profile-top">
@@ -285,7 +316,11 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
               <?php endif; ?>
             </div>
             <div class="dash-profile-name">
-              <?= htmlspecialchars($user['first_name'] . ' ' . ($user['middle_name'] ? $user['middle_name'][0].'. ' : '') . $user['last_name']) ?>
+              <?= htmlspecialchars(
+                    $user['first_name'] . ' ' .
+                    ($user['middle_name'] ? $user['middle_name'][0].'. ' : '') .
+                    $user['last_name']
+                  ) ?>
             </div>
             <div class="dash-profile-id"><?= htmlspecialchars($user['student_id']) ?></div>
           </div>
@@ -308,7 +343,7 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
               <div class="dash-info-icon"><i class="bi bi-envelope"></i></div>
               <div>
                 <div class="dash-info-label">Email</div>
-                <div class="dash-info-val" style="font-size:0.76rem; word-break:break-all;"><?= htmlspecialchars($user['email']) ?></div>
+                <div class="dash-info-val" style="font-size:0.72rem;word-break:break-all;"><?= htmlspecialchars($user['email']) ?></div>
               </div>
             </div>
             <div class="dash-info-row">
@@ -325,13 +360,14 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
           </div>
         </div>
 
+        <!-- Sessions widget -->
         <div class="dash-sessions-widget">
           <div class="dash-sess-header">
             <span class="dash-sess-label">Sessions</span>
             <a href="reserve.php" class="dash-sess-link">Reserve <i class="bi bi-arrow-right"></i></a>
           </div>
           <div class="dash-sess-num"><?= $remaining ?></div>
-          <div class="dash-sess-sub">of 30 total sessions remaining</div>
+          <div class="dash-sess-sub">of 30 total remaining</div>
           <div class="dash-sess-bar">
             <div class="dash-sess-fill" style="width:<?= $pct ?>%; background:<?= $barColor ?>;"></div>
           </div>
@@ -339,10 +375,9 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 
       </div>
 
-      <!-- MAIN -->
-      <div class="dash-main-col">
-
-        <div class="dash-card">
+      <!-- COL 2: Announcements -->
+      <div class="dash-ann-col">
+        <div class="dash-card" style="height:100%;">
           <div class="dash-card-head">
             <div class="dash-card-ico"><i class="bi bi-megaphone"></i></div>
             <span class="dash-card-title">Announcements</span>
@@ -369,11 +404,14 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
             <?php endif; ?>
           </div>
         </div>
+      </div>
 
-        <div class="dash-card">
+      <!-- COL 3: Lab Rules -->
+      <div class="dash-rules-col">
+        <div class="dash-card" style="height:100%;">
           <div class="dash-card-head">
             <div class="dash-card-ico"><i class="bi bi-journal-text"></i></div>
-            <span class="dash-card-title">Laboratory Rules &amp; Regulations</span>
+            <span class="dash-card-title">Rules &amp; Regulations</span>
           </div>
           <div class="dash-card-body">
 
@@ -423,9 +461,10 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 
           </div>
         </div>
-
       </div>
-    </div>
+
+    </div><!-- end .dash-3col -->
+
   </div>
 </div>
 

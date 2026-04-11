@@ -9,27 +9,33 @@ $_initials    = strtoupper(
     substr($_currentUser['last_name']  ?? '',  0, 1)
 );
 
-/* ── FIX: strip ?mark_read=1 from redirect URL to prevent infinite loop ── */
-if (isset($_GET['mark_read']) && isset($db)) {
-    markAllRead($db);
-    $cleanUrl = strtok($_SERVER['REQUEST_URI'], '?');
-    $leftover = $_GET;
-    unset($leftover['mark_read']);
-    if (!empty($leftover)) {
-        $cleanUrl .= '?' . http_build_query($leftover);
-    }
-    header('Location: ' . $cleanUrl);
-    exit;
+/*
+ * Profile picture: prefer the page-scoped $user variable (freshest DB read),
+ * fall back to the session copy. This fixes the issue where an uploaded photo
+ * was not reflected because the session copy was stale.
+ */
+$_profilePic = null;
+if (isset($user) && !empty($user['profile_picture'])) {
+    $_profilePic = $user['profile_picture'];
+} elseif (!empty($_currentUser['profile_picture'])) {
+    $_profilePic = $_currentUser['profile_picture'];
 }
 
+/*
+ * mark_read is NOT processed here to avoid "headers already sent".
+ * The "Mark all read" link points to pages/mark-read.php instead.
+ */
 $_currentFile = basename($_SERVER['PHP_SELF']);
 function _navActive(string $file): string {
     global $_currentFile;
     return $_currentFile === $file ? 'active' : '';
 }
+
+$_markReadUrl = (isset($base) ? $base : '../')
+    . 'pages/mark-read.php?redirect='
+    . urlencode(basename($_SERVER['PHP_SELF']));
 ?>
 <style>
-/* ── User navbar logo ── */
 .user-nav-logo-img {
   height: 30px; width: auto; object-fit: contain;
   filter: brightness(0) invert(1); opacity: 0.88; flex-shrink: 0;
@@ -37,6 +43,13 @@ function _navActive(string $file): string {
 .user-brand-text { display: flex; flex-direction: column; line-height: 1.25; }
 .user-brand-name { font-size: 0.80rem; font-weight: 700; color: #fff; letter-spacing: 0.15px; white-space: nowrap; }
 .user-brand-sub  { font-size: 0.60rem; color: rgba(189,232,245,0.58); letter-spacing: 0.3px; }
+
+/* Photo avatar in navbar */
+.user-avatar-photo {
+  width: 34px; height: 34px; border-radius: 50%;
+  object-fit: cover; display: block; flex-shrink: 0;
+  border: 2px solid rgba(189,232,245,0.35);
+}
 </style>
 
 <nav class="user-navbar">
@@ -65,7 +78,7 @@ function _navActive(string $file): string {
           <div class="notif-header">
             <span>Notifications</span>
             <?php if ($_unread > 0): ?>
-              <a href="?mark_read=1" class="notif-mark-read">Mark all read</a>
+              <a href="<?= htmlspecialchars($_markReadUrl) ?>" class="notif-mark-read">Mark all read</a>
             <?php endif; ?>
           </div>
           <div class="notif-list">
@@ -86,30 +99,23 @@ function _navActive(string $file): string {
         </div>
       </li>
 
-      <li><a href="<?= $base ?>pages/dashboard.php" class="<?= _navActive('dashboard.php') ?>">
-        <i class="bi bi-house"></i> Home
-      </a></li>
-      <li><a href="<?= $base ?>pages/edit-profile.php" class="<?= _navActive('edit-profile.php') ?>">
-        <i class="bi bi-person"></i> Profile
-      </a></li>
-      <li><a href="<?= $base ?>pages/history.php" class="<?= _navActive('history.php') ?>">
-        <i class="bi bi-clock-history"></i> History
-      </a></li>
-      <li><a href="<?= $base ?>pages/reserve.php" class="<?= _navActive('reserve.php') ?>">
-        <i class="bi bi-calendar-check"></i> Reserve
-      </a></li>
-      <li>
-        <a href="<?= $base ?>pages/logout.php" class="user-nav-logout">
-          <i class="bi bi-box-arrow-right"></i> Logout
-        </a>
-      </li>
+      <li><a href="<?= $base ?>pages/dashboard.php" class="<?= _navActive('dashboard.php') ?>"><i class="bi bi-house"></i> Home</a></li>
+      <li><a href="<?= $base ?>pages/edit-profile.php" class="<?= _navActive('edit-profile.php') ?>"><i class="bi bi-person"></i> Profile</a></li>
+      <li><a href="<?= $base ?>pages/history.php" class="<?= _navActive('history.php') ?>"><i class="bi bi-clock-history"></i> History</a></li>
+      <li><a href="<?= $base ?>pages/reserve.php" class="<?= _navActive('reserve.php') ?>"><i class="bi bi-calendar-check"></i> Reserve</a></li>
+      <li><a href="<?= $base ?>pages/logout.php" class="user-nav-logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
     </ul>
 
+    <!-- Avatar: photo or initials -->
     <div class="user-avatar-wrap">
-      <div class="user-avatar"><?= $_initials ?></div>
-      <span class="user-name-short">
-        <?= htmlspecialchars($_currentUser['first_name'] ?? '') ?>
-      </span>
+      <?php if ($_profilePic): ?>
+        <img src="<?= htmlspecialchars($_profilePic) ?>"
+             alt="<?= htmlspecialchars($_currentUser['first_name'] ?? '') ?>"
+             class="user-avatar-photo" />
+      <?php else: ?>
+        <div class="user-avatar"><?= $_initials ?></div>
+      <?php endif; ?>
+      <span class="user-name-short"><?= htmlspecialchars($_currentUser['first_name'] ?? '') ?></span>
     </div>
 
     <button class="hamburger user-hamburger" id="userHamburger" aria-label="Toggle menu">
@@ -119,7 +125,13 @@ function _navActive(string $file): string {
 
   <div class="user-mobile-menu" id="userMobileMenu">
     <div class="mobile-user-info">
-      <div class="user-avatar"><?= $_initials ?></div>
+      <?php if ($_profilePic): ?>
+        <img src="<?= htmlspecialchars($_profilePic) ?>"
+             alt="<?= htmlspecialchars($_currentUser['first_name'] ?? '') ?>"
+             class="user-avatar-photo" />
+      <?php else: ?>
+        <div class="user-avatar"><?= $_initials ?></div>
+      <?php endif; ?>
       <div>
         <strong><?= htmlspecialchars(($_currentUser['first_name'] ?? '') . ' ' . ($_currentUser['last_name'] ?? '')) ?></strong>
         <small><?= htmlspecialchars($_currentUser['student_id'] ?? '') ?></small>

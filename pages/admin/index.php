@@ -9,6 +9,7 @@ $db = getDB();
 
 /* ── Handle POST actions ── */
 $annSuccess = '';
+$annError   = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postAction = $_POST['post_action'] ?? '';
 
@@ -23,6 +24,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($users as $u)
                 $ins->execute([$u['id'], "New announcement: " . mb_substr($content,0,80) . (strlen($content)>80?'…':'')]);
             $annSuccess = 'Announcement posted successfully.';
+        }
+    }
+
+    /* Edit announcement */
+    if ($postAction === 'edit_announcement') {
+        $aid     = (int)($_POST['ann_id'] ?? 0);
+        $content = trim($_POST['ann_content'] ?? '');
+        if ($aid > 0 && $content) {
+            $db->prepare("UPDATE announcements SET content = ? WHERE id = ?")
+               ->execute([$content, $aid]);
+            $annSuccess = 'Announcement updated.';
+        } else {
+            $annError = 'Content cannot be empty.';
         }
     }
 
@@ -119,20 +133,25 @@ $recentSitIns = $db->query("
     .db-ann-divider { margin: 0 1.25rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
     .db-ann-heading { font-size: 0.70rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.75rem; }
     .db-ann-list { padding: 0 1.25rem 1.25rem; }
-    .db-ann-item { padding: 0.7rem 0; border-bottom: 1px solid #f1f5f9; position: relative; }
+    .db-ann-item { padding: 0.7rem 0; border-bottom: 1px solid #f1f5f9; }
     .db-ann-item:last-child { border-bottom: none; }
     .db-ann-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
-    .db-ann-date { font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.25rem; flex-shrink: 0; }
+    .db-ann-date { font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.25rem; }
     .db-ann-text { font-size: 0.82rem; color: #1e293b; line-height: 1.55; flex: 1; }
-    /* Delete button for announcement */
-    .db-ann-del {
-      background: none; border: none; cursor: pointer; padding: 3px 5px;
-      border-radius: 5px; color: #cbd5e1; font-size: 0.80rem;
-      transition: all 0.15s; flex-shrink: 0; line-height: 1;
+
+    /* Announcement action buttons */
+    .db-ann-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .db-ann-act-btn {
+      background: none; border: 1px solid transparent; cursor: pointer;
+      padding: 3px 5px; border-radius: 5px;
+      font-size: 0.78rem; transition: all 0.15s;
       display: flex; align-items: center; justify-content: center;
-      width: 24px; height: 24px;
+      width: 26px; height: 26px; line-height: 1;
     }
-    .db-ann-del:hover { background: rgba(220,38,38,0.08); color: #dc2626; }
+    .db-ann-edit-btn { color: #94a3b8; }
+    .db-ann-edit-btn:hover { background: rgba(37,99,235,0.08); color: #2563EB; border-color: rgba(37,99,235,0.20); }
+    .db-ann-del-btn  { color: #cbd5e1; }
+    .db-ann-del-btn:hover  { background: rgba(220,38,38,0.08); color: #dc2626; border-color: rgba(220,38,38,0.20); }
 
     /* Welcome */
     .db-welcome { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
@@ -140,6 +159,16 @@ $recentSitIns = $db->query("
     .db-welcome p  { font-size: 0.82rem; color: #94a3b8; }
     .db-date-chip { font-size: 0.78rem; color: #64748b; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.38rem 0.875rem; display: flex; align-items: center; gap: 5px; }
     .db-date-chip i { color: #2563EB; font-size: 0.82rem; }
+
+    /* Edit modal textarea */
+    #editAnnContent {
+      width: 100%; border: 1.5px solid #e2e8f0; border-radius: 7px;
+      padding: 0.65rem 0.875rem; font-family: 'Outfit', sans-serif;
+      font-size: 0.875rem; resize: vertical; min-height: 110px;
+      outline: none; transition: border-color 0.18s; color: #1e293b;
+    }
+    #editAnnContent:focus { border-color: #2563EB; }
+    .edit-char-hint { font-size: 0.70rem; color: #94a3b8; text-align: right; margin-top: 4px; }
 
     @media (max-width: 1100px) { .db-stat-grid { grid-template-columns: repeat(2,1fr); } .db-main-grid { grid-template-columns: 1fr; } .db-col-right { display: grid; grid-template-columns: 1fr 1fr; } }
     @media (max-width: 640px)  { .db-chart-grid { grid-template-columns: 1fr; } .db-col-right { grid-template-columns: 1fr; } .db-stat-grid { grid-template-columns: 1fr 1fr; } }
@@ -161,12 +190,6 @@ $recentSitIns = $db->query("
         <?= date('l, F j, Y') ?>
       </div>
     </div>
-
-    <?php if ($annSuccess): ?>
-      <div class="a-flash a-flash-success" style="margin-bottom:1.25rem;">
-        <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($annSuccess) ?>
-      </div>
-    <?php endif; ?>
 
     <!-- Stats -->
     <div class="db-stat-grid">
@@ -260,13 +283,14 @@ $recentSitIns = $db->query("
         <div class="a-card">
           <div class="a-card-header"><i class="bi bi-megaphone"></i> Post Announcement</div>
           <div class="db-ann-form">
-            <form method="POST" action="">
+            <form method="POST" action="" id="annPostForm">
               <input type="hidden" name="post_action" value="post_announcement">
               <textarea
                 name="announcement"
                 class="db-ann-ta"
                 placeholder="Write an announcement for all students..."
                 maxlength="500"
+                id="annTextarea"
                 oninput="document.getElementById('annCount').textContent = this.value.length"
               ></textarea>
               <div class="db-ann-meta">
@@ -278,7 +302,7 @@ $recentSitIns = $db->query("
             </form>
           </div>
 
-          <!-- Posted announcements with delete buttons -->
+          <!-- Posted announcements -->
           <div class="db-ann-divider">
             <div class="db-ann-heading">Recent Announcements</div>
           </div>
@@ -299,15 +323,24 @@ $recentSitIns = $db->query("
                       </div>
                       <div class="db-ann-text"><?= nl2br(htmlspecialchars($ann['content'])) ?></div>
                     </div>
-                    <!-- Delete button -->
-                    <form method="POST" action="" style="margin:0;"
-                          onsubmit="return confirm('Delete this announcement?')">
-                      <input type="hidden" name="post_action" value="delete_announcement">
-                      <input type="hidden" name="ann_id" value="<?= (int)$ann['id'] ?>">
-                      <button type="submit" class="db-ann-del" title="Delete announcement">
-                        <i class="bi bi-x-lg"></i>
+                    <!-- Action buttons -->
+                    <div class="db-ann-actions">
+                      <!-- Edit -->
+                      <button type="button" class="db-ann-act-btn db-ann-edit-btn"
+                              title="Edit announcement"
+                              onclick="openEditAnn(<?= (int)$ann['id'] ?>, <?= htmlspecialchars(json_encode($ann['content']), ENT_QUOTES) ?>)">
+                        <i class="bi bi-pencil"></i>
                       </button>
-                    </form>
+                      <!-- Delete -->
+                      <form method="POST" action="" style="margin:0;"
+                            onsubmit="return confirm('Delete this announcement?')">
+                        <input type="hidden" name="post_action" value="delete_announcement">
+                        <input type="hidden" name="ann_id" value="<?= (int)$ann['id'] ?>">
+                        <button type="submit" class="db-ann-act-btn db-ann-del-btn" title="Delete announcement">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 </div>
               <?php endforeach; ?>
@@ -321,6 +354,45 @@ $recentSitIns = $db->query("
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     EDIT ANNOUNCEMENT MODAL
+══════════════════════════════════════ -->
+<div class="a-modal-overlay" id="editAnnModal">
+  <div class="a-modal">
+    <div class="a-modal-header">
+      <span><i class="bi bi-pencil-square" style="margin-right:5px;color:#2563EB;font-size:0.85rem;"></i>Edit Announcement</span>
+      <button class="a-modal-close" onclick="closeEditAnn()">
+        <i class="bi bi-x-lg" style="font-size:0.7rem;"></i>
+      </button>
+    </div>
+    <form method="POST" action="" id="editAnnForm">
+      <input type="hidden" name="post_action" value="edit_announcement">
+      <input type="hidden" name="ann_id" id="editAnnId">
+      <div class="a-modal-body">
+        <label style="font-size:0.80rem;font-weight:600;color:#1e293b;display:block;margin-bottom:6px;">
+          Announcement Content
+        </label>
+        <textarea
+          id="editAnnContent"
+          name="ann_content"
+          maxlength="500"
+          placeholder="Edit announcement..."
+          required
+          oninput="document.getElementById('editCharCount').textContent = this.value.length"
+        ></textarea>
+        <div class="edit-char-hint"><span id="editCharCount">0</span> / 500</div>
+      </div>
+      <div class="a-modal-footer">
+        <button type="button" class="a-btn a-btn-gray" onclick="closeEditAnn()">Cancel</button>
+        <button type="submit" class="a-btn a-btn-primary">
+          <i class="bi bi-floppy"></i> Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="<?= $base ?>assets/js/toast.js"></script>
 <script>
 Chart.defaults.font.family = 'Outfit';
 const purposes = <?= json_encode(array_column($purposes,'purpose')) ?>;
@@ -353,6 +425,31 @@ new Chart(document.getElementById('labBarChart'), {
     }
   }
 });
+
+/* ── Edit Announcement Modal ── */
+function openEditAnn(id, content) {
+  document.getElementById('editAnnId').value       = id;
+  document.getElementById('editAnnContent').value  = content;
+  document.getElementById('editCharCount').textContent = content.length;
+  document.getElementById('editAnnModal').classList.add('open');
+}
+function closeEditAnn() {
+  document.getElementById('editAnnModal').classList.remove('open');
+}
+document.getElementById('editAnnModal')?.addEventListener('click', e => {
+  if (e.target.id === 'editAnnModal') closeEditAnn();
+});
+
+/* ── PHP flash → Toast ── */
+<?php if ($annSuccess): ?>
+  document.addEventListener('DOMContentLoaded', () => {
+    Toast.success(<?= json_encode($annSuccess) ?>);
+  });
+<?php elseif ($annError): ?>
+  document.addEventListener('DOMContentLoaded', () => {
+    Toast.error(<?= json_encode($annError) ?>);
+  });
+<?php endif; ?>
 </script>
 <script src="<?= $base ?>assets/js/admin.js"></script>
 </body>

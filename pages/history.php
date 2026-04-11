@@ -34,18 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_f
     exit;
 }
 
-/* ── Handle session self-logout ── */
-if (isset($_GET['logout_id'])) {
-    $lid = (int)$_GET['logout_id'];
-    $db->prepare(
-        "UPDATE sit_in_logs
-         SET logout_time = CURRENT_TIMESTAMP, status = 'done'
-         WHERE id = ? AND user_id = ? AND logout_time IS NULL"
-    )->execute([$lid, $uid]);
-    header('Location: history.php');
-    exit;
-}
-
 /* ── Fetch logs with feedback (LEFT JOIN) ── */
 $sitStmt = $db->prepare("
     SELECT u.student_id,
@@ -227,31 +215,39 @@ require_once __DIR__ . '/../includes/user-navbar.php';
               <th class="sortable" data-col="4">Login <span class="sort-icon">⇅</span></th>
               <th class="sortable" data-col="5">Logout <span class="sort-icon">⇅</span></th>
               <th class="sortable" data-col="6">Date <span class="sort-icon">⇅</span></th>
+              <th class="sortable" data-col="7">Status <span class="sort-icon">⇅</span></th>
               <th>Feedback</th>
-              <th>Action</th>
             </tr>
           </thead>
           <tbody id="histBody">
             <?php if (empty($logs)): ?>
               <tr class="hist-empty-row"><td colspan="9">No sit-in records found.</td></tr>
             <?php else: ?>
-              <?php foreach ($logs as $row): ?>
+              <?php foreach ($logs as $row):
+                $isActive   = empty($row['logout_time']);
+                $statusText = $isActive ? 'Active' : 'Completed';
+              ?>
                 <tr class="hist-row">
                   <td><?= htmlspecialchars($row['student_id']) ?></td>
                   <td><?= htmlspecialchars($row['full_name']) ?></td>
                   <td><?= htmlspecialchars($row['purpose'] ?? '—') ?></td>
                   <td><?= htmlspecialchars($row['lab_room']) ?></td>
                   <td><?= $row['login_time']  ? date('g:i A', strtotime($row['login_time']))  : '—' ?></td>
-                  <td>
-                    <?= $row['logout_time']
-                        ? date('g:i A', strtotime($row['logout_time']))
-                        : '<span class="hist-active">Active</span>' ?>
-                  </td>
+                  <td><?= $row['logout_time'] ? date('g:i A', strtotime($row['logout_time'])) : '—' ?></td>
                   <td><?= date('m/d/Y', strtotime($row['log_date'])) ?></td>
 
-                  <!-- ── Feedback cell ── -->
+                  <!-- Status column (display only — no logout button) -->
                   <td>
-                    <?php if (!$row['logout_time']): ?>
+                    <?php if ($isActive): ?>
+                      <span class="hist-active">Active</span>
+                    <?php else: ?>
+                      <span style="font-size:0.75rem; color:#64748b; font-weight:500;">Completed</span>
+                    <?php endif; ?>
+                  </td>
+
+                  <!-- Feedback column -->
+                  <td>
+                    <?php if ($isActive): ?>
                       <span class="fb-na" title="Session still active">—</span>
                     <?php elseif ($row['feedback_id']): ?>
                       <button class="fb-view-btn"
@@ -265,18 +261,6 @@ require_once __DIR__ . '/../includes/user-navbar.php';
                               onclick="openAddFb(<?= (int)$row['id'] ?>)">
                         <i class="bi bi-plus-circle"></i> Add
                       </button>
-                    <?php endif; ?>
-                  </td>
-
-                  <!-- ── Action cell ── -->
-                  <td>
-                    <?php if (!$row['logout_time']): ?>
-                      <a href="?logout_id=<?= (int)$row['id'] ?>" class="hist-action-btn"
-                         onclick="return confirm('Log out of this session?')">
-                        <i class="bi bi-door-open"></i> Logout
-                      </a>
-                    <?php else: ?>
-                      <span style="font-size:0.75rem; color:#94a3b8;">Completed</span>
                     <?php endif; ?>
                   </td>
                 </tr>
@@ -395,8 +379,8 @@ function applySearch(term) {
   const q = term.toLowerCase().trim();
   filtered = allRows.filter(row => {
     if (!q) return true;
-    // Search columns 0-6 (skip Feedback & Action cells)
-    for (let i = 0; i <= 6; i++) {
+    // Search columns 0-7 (skip Feedback cell)
+    for (let i = 0; i <= 7; i++) {
       if (cellText(row, i).includes(q)) return true;
     }
     return false;
@@ -462,7 +446,7 @@ render();
 /* ══════════════════════
    MODAL HELPERS
 ══════════════════════ */
-function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
+function openModal(id)    { document.getElementById(id)?.classList.add('open'); }
 function closeFbModal(id) { document.getElementById(id)?.classList.remove('open'); }
 
 /* Close on backdrop click */
@@ -478,17 +462,16 @@ function closeFbModal(id) { document.getElementById(id)?.classList.remove('open'
 let currentRating = 5;
 
 function openAddFb(sitInId) {
-  document.getElementById('fbSitInId').value     = sitInId;
-  document.getElementById('fbMessage').value      = '';
-  document.getElementById('fbCharCount').textContent = '0';
+  document.getElementById('fbSitInId').value          = sitInId;
+  document.getElementById('fbMessage').value           = '';
+  document.getElementById('fbCharCount').textContent   = '0';
   currentRating = 5;
-  document.getElementById('fbRatingInput').value  = 5;
+  document.getElementById('fbRatingInput').value       = 5;
   renderStars(5);
   openModal('addFbOverlay');
   setTimeout(() => document.getElementById('fbMessage')?.focus(), 120);
 }
 
-/* Star interaction */
 const stars = document.querySelectorAll('.fb-star');
 
 stars.forEach(star => {
@@ -505,7 +488,6 @@ function renderStars(rating) {
   stars.forEach(s => s.classList.toggle('lit', parseInt(s.dataset.val) <= rating));
 }
 
-/* Char counter */
 document.getElementById('fbMessage')?.addEventListener('input', function () {
   document.getElementById('fbCharCount').textContent = this.value.length;
 });
