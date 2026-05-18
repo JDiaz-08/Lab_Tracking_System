@@ -87,11 +87,44 @@ function _initDB(PDO $pdo): void {
         );
     ");
 
+    /* ── New tables ── */
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS pcs (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            lab_room    TEXT    NOT NULL,
+            pc_number   INTEGER NOT NULL,
+            status      TEXT    DEFAULT 'available',
+            occupied_by INTEGER,
+            UNIQUE(lab_room, pc_number),
+            FOREIGN KEY (occupied_by) REFERENCES users(id) ON DELETE SET NULL
+        );
+        CREATE TABLE IF NOT EXISTS testimonials (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL,
+            message     TEXT    NOT NULL,
+            rating      INTEGER DEFAULT 5,
+            status      TEXT    DEFAULT 'pending',
+            is_featured INTEGER DEFAULT 0,
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS lab_software (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            lab_room      TEXT NOT NULL,
+            software_name TEXT NOT NULL,
+            version       TEXT,
+            icon          TEXT,
+            created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    ");
+
     // Migrate existing DBs — add new columns if missing
     foreach ([
         "ALTER TABLE users ADD COLUMN remaining_sessions INTEGER DEFAULT 30",
         "ALTER TABLE sit_in_logs ADD COLUMN status TEXT DEFAULT 'active'",
         "ALTER TABLE users ADD COLUMN profile_picture TEXT",
+        "ALTER TABLE sit_in_logs ADD COLUMN pc_number INTEGER",
+        "ALTER TABLE reservations ADD COLUMN pc_number INTEGER",
     ] as $sql) {
         try { $pdo->exec($sql); } catch (PDOException $e) { /* already exists */ }
     }
@@ -108,5 +141,16 @@ function _initDB(PDO $pdo): void {
         $ins->execute(['Lab Schedule Update', 'The computer laboratories will be open Monday to Saturday, 7:00 AM – 9:00 PM. Sunday access requires prior reservation approval.']);
         $ins->execute(['Maintenance Notice',  'Lab Room 3 will undergo routine maintenance this Friday. Please use Lab Rooms 1, 2, 4, 5, or 6 as alternatives.']);
         $ins->execute(['Reminder: Lab Conduct','Students are reminded to log out properly after each session. Leaving sessions open affects availability for other students.']);
+    }
+
+    // Seed PCs — 49 per lab
+    $labRooms = ['524','526','528','530','542','Mac Laboratory'];
+    if ($pdo->query("SELECT COUNT(*) FROM pcs")->fetchColumn() == 0) {
+        $pcIns = $pdo->prepare("INSERT INTO pcs (lab_room, pc_number, status) VALUES (?, ?, 'available')");
+        foreach ($labRooms as $lab) {
+            for ($i = 1; $i <= 49; $i++) {
+                $pcIns->execute([$lab, $i]);
+            }
+        }
     }
 }

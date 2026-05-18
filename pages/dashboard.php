@@ -23,6 +23,23 @@ $activeSitInStmt = $db->prepare(
 $activeSitInStmt->execute([$user['id']]);
 $activeSitIn = $activeSitInStmt->fetch();
 
+/* ── Sit-in Summary stats ── */
+$summaryStmt = $db->prepare("
+    SELECT COUNT(*) AS total_sessions,
+           COALESCE(SUM(CAST((julianday(logout_time) - julianday(login_time)) * 24 * 60 AS INTEGER)), 0) AS total_minutes,
+           COALESCE(AVG(CAST((julianday(logout_time) - julianday(login_time)) * 24 * 60 AS INTEGER)), 0) AS avg_minutes,
+           COALESCE(MAX(CAST((julianday(logout_time) - julianday(login_time)) * 24 * 60 AS INTEGER)), 0) AS max_minutes
+    FROM sit_in_logs
+    WHERE user_id = ? AND logout_time IS NOT NULL
+");
+$summaryStmt->execute([$user['id']]);
+$summary = $summaryStmt->fetch();
+$totalHours  = floor(($summary['total_minutes'] ?? 0) / 60);
+$totalMins   = ($summary['total_minutes'] ?? 0) % 60;
+$avgMins     = round($summary['avg_minutes'] ?? 0);
+$maxH        = floor(($summary['max_minutes'] ?? 0) / 60);
+$maxM        = ($summary['max_minutes'] ?? 0) % 60;
+
 $yearMap   = ['1'=>'1st Year','2'=>'2nd Year','3'=>'3rd Year','4'=>'4th Year','5'=>'5th Year'];
 $remaining = (int)($user['remaining_sessions'] ?? 30);
 $pct       = min(100, round(($remaining / 30) * 100));
@@ -155,6 +172,43 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
   background: #fff; border: 1px solid #e2e8f0;
   border-radius: 12px; padding: 1rem 1.25rem;
   box-shadow: 0 1px 4px rgba(15,40,84,0.05);
+}
+
+/* Sit-in Summary widget */
+.dash-summary-widget {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 12px; padding: 1rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(15,40,84,0.05);
+  margin-top: 1rem;
+}
+.dash-sum-header {
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 0.75rem;
+}
+.dash-sum-ico {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: rgba(37,99,235,0.08); color: #2563EB;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; flex-shrink: 0;
+}
+.dash-sum-label {
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--mid);
+}
+.dash-sum-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;
+}
+.dash-sum-item {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 8px; padding: 0.6rem 0.7rem; text-align: center;
+}
+.dash-sum-val {
+  font-family: var(--font-display);
+  font-size: 1.15rem; font-weight: 800; color: var(--navy);
+  line-height: 1; margin-bottom: 2px;
+}
+.dash-sum-sub {
+  font-size: 0.60rem; color: #94a3b8; letter-spacing: 0.2px;
   margin-top: 1rem;
 }
 .dash-sess-header {
@@ -370,6 +424,32 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
           <div class="dash-sess-sub">of 30 total remaining</div>
           <div class="dash-sess-bar">
             <div class="dash-sess-fill" style="width:<?= $pct ?>%; background:<?= $barColor ?>;"></div>
+          </div>
+        </div>
+
+        <!-- Sit-in Summary widget -->
+        <div class="dash-summary-widget">
+          <div class="dash-sum-header">
+            <div class="dash-sum-ico"><i class="bi bi-bar-chart-line"></i></div>
+            <span class="dash-sum-label">Sit-in Summary</span>
+          </div>
+          <div class="dash-sum-grid">
+            <div class="dash-sum-item">
+              <div class="dash-sum-val"><?= $totalHours ?>h <?= $totalMins ?>m</div>
+              <div class="dash-sum-sub">Total Hours</div>
+            </div>
+            <div class="dash-sum-item">
+              <div class="dash-sum-val"><?= (int)$summary['total_sessions'] ?></div>
+              <div class="dash-sum-sub">Sessions Used</div>
+            </div>
+            <div class="dash-sum-item">
+              <div class="dash-sum-val"><?= $avgMins ?>m</div>
+              <div class="dash-sum-sub">Avg Duration</div>
+            </div>
+            <div class="dash-sum-item">
+              <div class="dash-sum-val"><?= $maxH ?>h <?= $maxM ?>m</div>
+              <div class="dash-sum-sub">Longest Session</div>
+            </div>
           </div>
         </div>
 

@@ -116,13 +116,14 @@ $reservations = $db->query("
                 <th class="a-sortable" data-col="3">Date <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="4">Time <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="5">Purpose <span class="a-sort-icon">⇅</span></th>
-                <th class="a-sortable" data-col="6">Status <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="6">PC <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="7">Status <span class="a-sort-icon">⇅</span></th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="resBody">
               <?php if (empty($reservations)): ?>
-                <tr class="a-table-empty"><td colspan="8">No reservations yet.</td></tr>
+                <tr class="a-table-empty"><td colspan="9">No reservations yet.</td></tr>
               <?php else: ?>
                 <?php foreach ($reservations as $r): ?>
                   <tr class="a-data-row">
@@ -132,6 +133,7 @@ $reservations = $db->query("
                     <td><?= date('M j, Y', strtotime($r['date'])) ?></td>
                     <td><?= htmlspecialchars($r['time_slot']) ?></td>
                     <td><?= htmlspecialchars($r['purpose'] ?? '—') ?></td>
+                    <td><?= $r['pc_number'] ? 'PC-'.str_pad($r['pc_number'],2,'0',STR_PAD_LEFT) : '—' ?></td>
                     <td>
                       <span class="a-badge badge-<?= $r['status'] ?>">
                         <?= ucfirst($r['status']) ?>

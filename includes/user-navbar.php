@@ -103,6 +103,8 @@ $_markReadUrl = (isset($base) ? $base : '../')
       <li><a href="<?= $base ?>pages/edit-profile.php" class="<?= _navActive('edit-profile.php') ?>"><i class="bi bi-person"></i> Profile</a></li>
       <li><a href="<?= $base ?>pages/history.php" class="<?= _navActive('history.php') ?>"><i class="bi bi-clock-history"></i> History</a></li>
       <li><a href="<?= $base ?>pages/reserve.php" class="<?= _navActive('reserve.php') ?>"><i class="bi bi-calendar-check"></i> Reserve</a></li>
+      <li><a href="<?= $base ?>pages/testimonials.php" class="<?= _navActive('testimonials.php') ?>"><i class="bi bi-chat-heart"></i> Testimonials</a></li>
+      <li><a href="<?= $base ?>pages/software.php" class="<?= _navActive('software.php') ?>"><i class="bi bi-cpu"></i> Software</a></li>
       <li><a href="<?= $base ?>pages/logout.php" class="user-nav-logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
     </ul>
 
@@ -141,6 +143,8 @@ $_markReadUrl = (isset($base) ? $base : '../')
     <a href="<?= $base ?>pages/edit-profile.php"><i class="bi bi-person"></i> Edit Profile</a>
     <a href="<?= $base ?>pages/history.php"><i class="bi bi-clock-history"></i> History</a>
     <a href="<?= $base ?>pages/reserve.php"><i class="bi bi-calendar-check"></i> Reserve</a>
+    <a href="<?= $base ?>pages/testimonials.php"><i class="bi bi-chat-heart"></i> Testimonials</a>
+    <a href="<?= $base ?>pages/software.php"><i class="bi bi-cpu"></i> Software</a>
     <a href="<?= $base ?>pages/logout.php" class="mobile-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
   </div>
 </nav>

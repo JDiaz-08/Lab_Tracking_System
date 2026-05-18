@@ -12,7 +12,7 @@ $records = $db->query("
            u.first_name || ' ' || COALESCE(u.middle_name || ' ', '') || u.last_name AS full_name,
            s.purpose, s.lab_room,
            s.login_time, s.logout_time,
-           DATE(s.login_time) AS log_date, s.status
+           DATE(s.login_time) AS log_date, s.status, s.pc_number
     FROM sit_in_logs s
     JOIN users u ON u.id = s.user_id
     ORDER BY s.login_time DESC
@@ -65,12 +65,13 @@ $records = $db->query("
                 <th class="a-sortable" data-col="4">Login <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="5">Logout <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="6">Date <span class="a-sort-icon">⇅</span></th>
-                <th class="a-sortable" data-col="7">Status <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="7">PC <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="8">Status <span class="a-sort-icon">⇅</span></th>
               </tr>
             </thead>
             <tbody id="recBody">
               <?php if (empty($records)): ?>
-                <tr class="a-table-empty"><td colspan="8">No records found.</td></tr>
+                <tr class="a-table-empty"><td colspan="9">No records found.</td></tr>
               <?php else: ?>
                 <?php foreach ($records as $r): ?>
                   <tr class="a-data-row">
@@ -81,6 +82,7 @@ $records = $db->query("
                     <td><?= $r['login_time']  ? date('g:i A', strtotime($r['login_time']))  : '—' ?></td>
                     <td><?= $r['logout_time'] ? date('g:i A', strtotime($r['logout_time'])) : '—' ?></td>
                     <td><?= date('m/d/Y', strtotime($r['log_date'])) ?></td>
+                    <td><?= $r['pc_number'] ? 'PC-'.str_pad($r['pc_number'],2,'0',STR_PAD_LEFT) : '—' ?></td>
                     <td>
                       <?php $st = $r['logout_time'] ? 'done' : 'active'; ?>
                       <span class="a-badge badge-<?= $st ?>"><?= ucfirst($st) ?></span>

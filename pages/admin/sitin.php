@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sid = (int)($_POST['sit_id'] ?? 0);
         if ($sid > 0) {
             $logStmt = $db->prepare(
-                "SELECT user_id FROM sit_in_logs WHERE id = ? AND logout_time IS NULL"
+                "SELECT user_id, lab_room, pc_number FROM sit_in_logs WHERE id = ? AND logout_time IS NULL"
             );
             $logStmt->execute([$sid]);
             $log = $logStmt->fetch();
@@ -31,6 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->prepare(
                     "UPDATE users SET remaining_sessions = MAX(0, remaining_sessions - 1) WHERE id = ?"
                 )->execute([$log['user_id']]);
+
+                /* Release PC */
+                if ($log['pc_number']) {
+                    $db->prepare("UPDATE pcs SET status = 'available', occupied_by = NULL WHERE lab_room = ? AND pc_number = ?")
+                       ->execute([$log['lab_room'], $log['pc_number']]);
+                }
 
                 $db->prepare(
                     "INSERT INTO notifications (user_id, message) VALUES (?, ?)"
@@ -53,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uid     = (int)($_POST['user_id'] ?? 0);
         $purpose = trim($_POST['purpose']  ?? '');
         $lab     = trim($_POST['lab_room'] ?? '');
+        $pcNum   = (int)($_POST['pc_number'] ?? 0);
 
         if (!$uid || !$purpose || !$lab) {
             $flash     = 'All fields are required.';
@@ -80,17 +87,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $flashType = 'error';
                 } else {
                     $db->prepare(
-                        "INSERT INTO sit_in_logs (user_id, lab_room, purpose, status) VALUES (?, ?, ?, 'active')"
-                    )->execute([$uid, $lab, $purpose]);
+                        "INSERT INTO sit_in_logs (user_id, lab_room, purpose, status, pc_number) VALUES (?, ?, ?, 'active', ?)"
+                    )->execute([$uid, $lab, $purpose, $pcNum ?: null]);
 
+                    /* Mark PC as occupied */
+                    if ($pcNum > 0) {
+                        $db->prepare("UPDATE pcs SET status = 'occupied', occupied_by = ? WHERE lab_room = ? AND pc_number = ?")
+                           ->execute([$uid, $lab, $pcNum]);
+                    }
+
+                    $pcLabel = $pcNum ? ' (PC-'.str_pad($pcNum,2,'0',STR_PAD_LEFT).')' : '';
                     $db->prepare(
                         "INSERT INTO notifications (user_id, message) VALUES (?, ?)"
                     )->execute([
                         $uid,
-                        "You have been logged in for a sit-in session in Lab {$lab} ({$purpose})."
+                        "You have been logged in for a sit-in session in Lab {$lab}{$pcLabel} ({$purpose})."
                     ]);
 
-                    $flash = "Sit-in started for {$u['first_name']} {$u['last_name']} in Lab {$lab}.";
+                    $flash = "Sit-in started for {$u['first_name']} {$u['last_name']} in Lab {$lab}{$pcLabel}.";
                 }
             }
         }
@@ -108,7 +122,7 @@ if (isset($_GET['flash'])) {
 $sitins = $db->query("
     SELECT s.id, u.id AS user_id, u.student_id,
            u.first_name || ' ' || u.last_name AS full_name,
-           s.purpose, s.lab_room, u.remaining_sessions, s.status, s.login_time
+           s.purpose, s.lab_room, u.remaining_sessions, s.status, s.login_time, s.pc_number
     FROM sit_in_logs s
     JOIN users u ON u.id = s.user_id
     WHERE s.logout_time IS NULL
@@ -243,15 +257,16 @@ $labRooms = ['524','526','528','530','542','Mac Laboratory'];
                 <th class="a-sortable" data-col="2">Name <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="3">Purpose <span class="a-sort-icon">⇅</span></th>
                 <th class="a-sortable" data-col="4">Lab <span class="a-sort-icon">⇅</span></th>
-                <th class="a-sortable" data-col="5">Sessions Left <span class="a-sort-icon">⇅</span></th>
-                <th class="a-sortable" data-col="6">Status <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="5">PC <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="6">Sessions Left <span class="a-sort-icon">⇅</span></th>
+                <th class="a-sortable" data-col="7">Status <span class="a-sort-icon">⇅</span></th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody id="sitBody">
               <?php if (empty($sitins)): ?>
                 <tr class="a-table-empty">
-                  <td colspan="8">No active sit-in sessions.</td>
+                  <td colspan="9">No active sit-in sessions.</td>
                 </tr>
               <?php else: ?>
                 <?php foreach ($sitins as $row): ?>
@@ -261,6 +276,7 @@ $labRooms = ['524','526','528','530','542','Mac Laboratory'];
                     <td><?= htmlspecialchars($row['full_name']) ?></td>
                     <td><?= htmlspecialchars($row['purpose'] ?? '—') ?></td>
                     <td><?= htmlspecialchars($row['lab_room']) ?></td>
+                    <td><?= $row['pc_number'] ? 'PC-'.str_pad($row['pc_number'],2,'0',STR_PAD_LEFT) : '—' ?></td>
                     <td><?= (int)$row['remaining_sessions'] ?></td>
                     <td><span class="a-badge badge-active">Active</span></td>
                     <td>
@@ -351,11 +367,17 @@ $labRooms = ['524','526','528','530','542','Mac Laboratory'];
         </div>
         <div class="a-mrow">
           <label class="a-mlabel">Laboratory</label>
-          <select name="lab_room" id="fLab" class="a-minput" required>
+          <select name="lab_room" id="fLab" class="a-minput" required onchange="loadPcOptions('fLab','fPcNumber')">
             <option value="" disabled selected>— Select Lab —</option>
             <?php foreach ($labRooms as $lab): ?>
               <option value="<?= htmlspecialchars($lab) ?>"><?= htmlspecialchars($lab) ?></option>
             <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">PC Number</label>
+          <select name="pc_number" id="fPcNumber" class="a-minput">
+            <option value="" selected>— Select a lab first —</option>
           </select>
         </div>
         <div class="a-mrow">
@@ -469,6 +491,25 @@ function esc(str) {
     return String(str)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;')
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function loadPcOptions(labSelectId, pcSelectId) {
+    const lab = document.getElementById(labSelectId).value;
+    const sel = document.getElementById(pcSelectId);
+    sel.innerHTML = '<option value="">— Loading... —</option>';
+    if (!lab) { sel.innerHTML = '<option value="">— Select a lab first —</option>'; return; }
+    fetch('<?= $base ?>pages/api/pc-status.php?lab=' + encodeURIComponent(lab))
+      .then(r => r.json())
+      .then(pcs => {
+        sel.innerHTML = '<option value="">— Select PC (optional) —</option>';
+        pcs.forEach(pc => {
+          const num = String(pc.pc_number).padStart(2,'0');
+          const disabled = pc.status !== 'available';
+          const label = 'PC-' + num + (disabled ? ' (' + pc.status + ')' : '');
+          sel.innerHTML += '<option value="' + pc.pc_number + '"' + (disabled ? ' disabled' : '') + '>' + label + '</option>';
+        });
+      })
+      .catch(() => { sel.innerHTML = '<option value="">— Error loading PCs —</option>'; });
 }
 
 initAdminTable({

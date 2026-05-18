@@ -110,6 +110,15 @@ function _aNav(string $file): string {
       <li><a href="<?= $base ?>pages/admin/reservation.php" class="<?= _aNav('reservation.php') ?>">
         <i class="bi bi-calendar-check"></i> Reservations
       </a></li>
+      <li><a href="<?= $base ?>pages/admin/pc-control.php" class="<?= _aNav('pc-control.php') ?>">
+        <i class="bi bi-display"></i> PC Control
+      </a></li>
+      <li><a href="<?= $base ?>pages/admin/testimonials.php" class="<?= _aNav('testimonials.php') ?>">
+        <i class="bi bi-chat-heart"></i> Testimonials
+      </a></li>
+      <li><a href="<?= $base ?>pages/admin/software.php" class="<?= _aNav('software.php') ?>">
+        <i class="bi bi-cpu"></i> Software
+      </a></li>
       <li><a href="<?= $base ?>pages/logout.php" class="admin-logout-btn">
         <i class="bi bi-box-arrow-right"></i> Log out
       </a></li>
@@ -129,6 +138,9 @@ function _aNav(string $file): string {
     <a href="<?= $base ?>pages/admin/sitin-reports.php"><i class="bi bi-bar-chart-line"></i> Reports</a>
     <a href="<?= $base ?>pages/admin/feedback.php"><i class="bi bi-chat-square-text"></i> Feedback</a>
     <a href="<?= $base ?>pages/admin/reservation.php"><i class="bi bi-calendar-check"></i> Reservations</a>
+    <a href="<?= $base ?>pages/admin/pc-control.php"><i class="bi bi-display"></i> PC Control</a>
+    <a href="<?= $base ?>pages/admin/testimonials.php"><i class="bi bi-chat-heart"></i> Testimonials</a>
+    <a href="<?= $base ?>pages/admin/software.php"><i class="bi bi-cpu"></i> Software</a>
     <a href="<?= $base ?>pages/logout.php" class="admin-logout-btn"><i class="bi bi-box-arrow-right"></i> Log out</a>
   </div>
 </nav>
@@ -210,6 +222,12 @@ function _aNav(string $file): string {
             <?php foreach ($_sitLabs as $lab): ?>
               <option value="<?= htmlspecialchars($lab) ?>"><?= htmlspecialchars($lab) ?></option>
             <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="a-mrow">
+          <label class="a-mlabel">PC Number</label>
+          <select name="pc_number" id="nsPcNumber" class="a-minput">
+            <option value="">— Select a lab first —</option>
           </select>
         </div>
 
@@ -312,6 +330,9 @@ function _aNav(string $file): string {
     document.getElementById('nsSessions').textContent = rem + ' / 30';
     document.getElementById('nsPurpose').selectedIndex = 0;
     document.getElementById('nsLab').selectedIndex     = 0;
+    /* Reset PC dropdown */
+    const pcSel = document.getElementById('nsPcNumber');
+    if (pcSel) pcSel.innerHTML = '<option value="">— Select a lab first —</option>';
 
     const warn   = document.getElementById('nsWarn');
     const submit = document.getElementById('nsSubmit');
@@ -341,6 +362,26 @@ function _aNav(string $file): string {
   document.getElementById('navSitInClose')?.addEventListener('click', () => closeModal('navSitInModal'));
   document.getElementById('navSitInModal')?.addEventListener('click', e => {
     if (e.target.id === 'navSitInModal') closeModal('navSitInModal');
+  });
+
+  /* ── Load PC options when lab changes ── */
+  document.getElementById('nsLab')?.addEventListener('change', function() {
+    const lab = this.value;
+    const sel = document.getElementById('nsPcNumber');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Loading... —</option>';
+    if (!lab) { sel.innerHTML = '<option value="">— Select a lab first —</option>'; return; }
+    fetch('<?= $base ?>pages/api/pc-status.php?lab=' + encodeURIComponent(lab))
+      .then(r => r.json())
+      .then(pcs => {
+        sel.innerHTML = '<option value="">— Select PC (optional) —</option>';
+        pcs.forEach(pc => {
+          const num = String(pc.pc_number).padStart(2,'0');
+          const dis = pc.status !== 'available';
+          sel.innerHTML += '<option value="'+pc.pc_number+'"'+(dis?' disabled':'')+'>PC-'+num+(dis?' ('+pc.status+')':'')+'</option>';
+        });
+      })
+      .catch(() => { sel.innerHTML = '<option value="">— Error —</option>'; });
   });
 })();
 </script>

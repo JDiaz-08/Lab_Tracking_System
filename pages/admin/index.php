@@ -276,6 +276,9 @@ $recentSitIns = $db->query("
             <a href="<?= $base ?>pages/admin/sitin-reports.php" class="db-ql-item"><i class="bi bi-bar-chart-line"></i> Reports</a>
             <a href="<?= $base ?>pages/admin/view-sitin.php" class="db-ql-item"><i class="bi bi-table"></i> Records</a>
             <a href="<?= $base ?>pages/admin/feedback.php" class="db-ql-item"><i class="bi bi-chat-square-text"></i> Feedback</a>
+            <a href="<?= $base ?>pages/admin/pc-control.php" class="db-ql-item"><i class="bi bi-display"></i> PC Control</a>
+            <a href="<?= $base ?>pages/admin/testimonials.php" class="db-ql-item"><i class="bi bi-chat-heart"></i> Testimonials</a>
+            <a href="<?= $base ?>pages/admin/software.php" class="db-ql-item"><i class="bi bi-cpu"></i> Software</a>
           </div>
         </div>
 

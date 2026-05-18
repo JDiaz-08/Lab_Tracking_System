@@ -39,7 +39,7 @@ $sitStmt = $db->prepare("
     SELECT u.student_id,
            u.first_name || ' ' || COALESCE(u.middle_name || ' ', '') || u.last_name AS full_name,
            s.purpose, s.lab_room, s.login_time, s.logout_time,
-           DATE(s.login_time) AS log_date, s.id,
+           DATE(s.login_time) AS log_date, s.id, s.pc_number,
            f.id      AS feedback_id,
            f.message AS feedback_msg,
            f.rating  AS feedback_rating
@@ -214,14 +214,16 @@ require_once __DIR__ . '/../includes/user-navbar.php';
               <th class="sortable" data-col="3">Laboratory <span class="sort-icon">⇅</span></th>
               <th class="sortable" data-col="4">Login <span class="sort-icon">⇅</span></th>
               <th class="sortable" data-col="5">Logout <span class="sort-icon">⇅</span></th>
-              <th class="sortable" data-col="6">Date <span class="sort-icon">⇅</span></th>
-              <th class="sortable" data-col="7">Status <span class="sort-icon">⇅</span></th>
+              <th class="sortable" data-col="6">Duration <span class="sort-icon">⇅</span></th>
+              <th class="sortable" data-col="7">Date <span class="sort-icon">⇅</span></th>
+              <th class="sortable" data-col="8">PC <span class="sort-icon">⇅</span></th>
+              <th class="sortable" data-col="9">Status <span class="sort-icon">⇅</span></th>
               <th>Feedback</th>
             </tr>
           </thead>
           <tbody id="histBody">
             <?php if (empty($logs)): ?>
-              <tr class="hist-empty-row"><td colspan="9">No sit-in records found.</td></tr>
+              <tr class="hist-empty-row"><td colspan="11">No sit-in records found.</td></tr>
             <?php else: ?>
               <?php foreach ($logs as $row):
                 $isActive   = empty($row['logout_time']);
@@ -234,7 +236,16 @@ require_once __DIR__ . '/../includes/user-navbar.php';
                   <td><?= htmlspecialchars($row['lab_room']) ?></td>
                   <td><?= $row['login_time']  ? date('g:i A', strtotime($row['login_time']))  : '—' ?></td>
                   <td><?= $row['logout_time'] ? date('g:i A', strtotime($row['logout_time'])) : '—' ?></td>
+                  <td>
+                    <?php if (!$isActive && $row['logout_time']): 
+                      $durMin = round((strtotime($row['logout_time']) - strtotime($row['login_time'])) / 60);
+                      echo $durMin >= 60 ? floor($durMin/60).'h '.($durMin%60).'m' : $durMin.'m';
+                    else: ?>
+                      —
+                    <?php endif; ?>
+                  </td>
                   <td><?= date('m/d/Y', strtotime($row['log_date'])) ?></td>
+                  <td><?= $row['pc_number'] ? 'PC-'.str_pad($row['pc_number'],2,'0',STR_PAD_LEFT) : '—' ?></td>
 
                   <!-- Status column (display only — no logout button) -->
                   <td>
@@ -379,8 +390,8 @@ function applySearch(term) {
   const q = term.toLowerCase().trim();
   filtered = allRows.filter(row => {
     if (!q) return true;
-    // Search columns 0-7 (skip Feedback cell)
-    for (let i = 0; i <= 7; i++) {
+    // Search columns 0-9 (skip Feedback cell)
+    for (let i = 0; i <= 9; i++) {
       if (cellText(row, i).includes(q)) return true;
     }
     return false;

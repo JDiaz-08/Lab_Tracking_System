@@ -2,6 +2,21 @@
 // FILE: index.php
 $pageTitle = 'Sit In Management';
 $base = '';
+require_once __DIR__ . '/config/database.php';
+$db = getDB();
+
+/* Fetch featured testimonials for landing page */
+$featuredTestimonials = $db->query("
+    SELECT t.message, t.rating,
+           u.first_name || ' ' || u.last_name AS full_name,
+           u.course, u.profile_picture
+    FROM testimonials t
+    JOIN users u ON u.id = t.user_id
+    WHERE t.status = 'approved' AND t.is_featured = 1
+    ORDER BY t.created_at DESC
+    LIMIT 6
+")->fetchAll();
+
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
@@ -153,9 +168,59 @@ require_once __DIR__ . '/includes/navbar.php';
   .sim-stat-item   { border-bottom: 1px solid rgba(189,232,245,0.08); }
   .sim-stat-item:nth-child(2) { border-right: none; }
 }
+/* Testimonials */
+.sim-testimonials { padding: 6rem 0 5rem; background: #fff; }
+.sim-test-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem; margin-top: 2.5rem;
+}
+.sim-test-card {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 14px; padding: 1.5rem 1.35rem;
+  transition: all 0.2s; position: relative;
+}
+.sim-test-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(15,40,84,0.08);
+  border-color: rgba(73,136,196,0.25);
+}
+.sim-test-card::before {
+  content: '\201C'; position: absolute; top: 12px; right: 18px;
+  font-size: 3rem; color: rgba(73,136,196,0.12);
+  font-family: Georgia, serif; line-height: 1;
+}
+.sim-test-stars {
+  color: #d97706; font-size: 0.82rem; letter-spacing: 1.5px;
+  margin-bottom: 0.75rem;
+}
+.sim-test-stars .off { color: #e2e8f0; }
+.sim-test-msg {
+  font-size: 0.875rem; color: #475569; line-height: 1.75;
+  font-weight: 300; margin-bottom: 1rem;
+  font-style: italic;
+}
+.sim-test-author {
+  display: flex; align-items: center; gap: 0.65rem;
+  border-top: 1px solid #e2e8f0; padding-top: 0.875rem;
+}
+.sim-test-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--mid));
+  color: #fff; font-size: 0.72rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; overflow: hidden;
+}
+.sim-test-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.sim-test-name { font-size: 0.82rem; font-weight: 700; color: var(--navy); }
+.sim-test-course { font-size: 0.70rem; color: #94a3b8; }
+
+@media (max-width: 960px) {
+  .sim-test-grid { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 600px) {
   .sim-feat-grid  { grid-template-columns: 1fr; }
   .sim-steps-grid { grid-template-columns: 1fr; }
+  .sim-test-grid  { grid-template-columns: 1fr; }
 }
 </style>
 
@@ -251,6 +316,44 @@ require_once __DIR__ . '/includes/navbar.php';
     </div>
   </div>
 </section>
+
+<!-- TESTIMONIALS -->
+<?php if (!empty($featuredTestimonials)): ?>
+<section class="sim-testimonials">
+  <div class="sim-container">
+    <div class="sim-section-hd reveal">
+      <span class="sim-eyebrow">Student Voices</span>
+      <h2 class="sim-section-h2">What Students Say</h2>
+      <p class="sim-section-desc">Hear from students who use our lab facilities every day.</p>
+    </div>
+    <div class="sim-test-grid">
+      <?php foreach ($featuredTestimonials as $ft):
+        $initials = strtoupper(substr($ft['full_name'],0,1) . substr(explode(' ',$ft['full_name'])[1] ?? '',0,1));
+      ?>
+        <div class="sim-test-card reveal">
+          <div class="sim-test-stars">
+            <?= str_repeat('★', (int)$ft['rating']) ?><?php if ((int)$ft['rating'] < 5): ?><span class="off"><?= str_repeat('★', 5 - (int)$ft['rating']) ?></span><?php endif; ?>
+          </div>
+          <p class="sim-test-msg"><?= htmlspecialchars(mb_substr($ft['message'], 0, 180)) ?><?= strlen($ft['message']) > 180 ? '…' : '' ?></p>
+          <div class="sim-test-author">
+            <div class="sim-test-avatar">
+              <?php if (!empty($ft['profile_picture'])): ?>
+                <img src="<?= htmlspecialchars($ft['profile_picture']) ?>" alt="" />
+              <?php else: ?>
+                <?= $initials ?>
+              <?php endif; ?>
+            </div>
+            <div>
+              <div class="sim-test-name"><?= htmlspecialchars($ft['full_name']) ?></div>
+              <div class="sim-test-course"><?= htmlspecialchars($ft['course']) ?></div>
+            </div>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
 
 <!-- CTA -->
 <section class="sim-cta">
