@@ -75,6 +75,18 @@ $recentSitIns = $db->query("
     ORDER BY s.login_time DESC
     LIMIT 6
 ")->fetchAll();
+
+/* ── Leaderboard: top students by completed sessions ── */
+$topStudentsAdmin = $db->query("
+    SELECT u.first_name, u.last_name, u.course, u.profile_picture,
+           u.points, u.remaining_sessions,
+           COUNT(s.id) AS total_sessions
+    FROM users u
+    LEFT JOIN sit_in_logs s ON s.user_id = u.id AND s.logout_time IS NOT NULL
+    GROUP BY u.id
+    ORDER BY total_sessions DESC, u.points DESC
+    LIMIT 5
+")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -170,6 +182,29 @@ $recentSitIns = $db->query("
     #editAnnContent:focus { border-color: #2563EB; }
     .edit-char-hint { font-size: 0.70rem; color: #94a3b8; text-align: right; margin-top: 4px; }
 
+    /* Leaderboard widget */
+    .db-lb-list { padding: 0.5rem 1.25rem 1rem; }
+    .db-lb-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid #f1f5f9; }
+    .db-lb-item:last-child { border-bottom: none; }
+    .db-lb-rank {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 800;
+    }
+    .db-lb-rank.gold   { background: linear-gradient(135deg,#f59e0b,#fbbf24); color: #fff; }
+    .db-lb-rank.silver { background: linear-gradient(135deg,#94a3b8,#cbd5e1); color: #fff; }
+    .db-lb-rank.bronze { background: linear-gradient(135deg,#d97706,#fbbf24); color: #fff; }
+    .db-lb-rank.other  { background: #f1f5f9; color: #64748b; }
+    .db-lb-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#1a3a6b,#2563EB); color: #fff; font-size: 0.65rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+    .db-lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .db-lb-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; }
+    .db-lb-course { font-size: 0.68rem; color: #94a3b8; }
+    .db-lb-right { margin-left: auto; text-align: right; flex-shrink: 0; }
+    .db-lb-sessions { font-size: 1rem; font-weight: 800; color: #1e293b; line-height: 1; }
+    .db-lb-pts { font-size: 0.62rem; color: #4988c4; font-weight: 600; }
+    .db-lb-prog { margin-top: 3px; background: #f1f5f9; border-radius: 100px; height: 4px; width: 60px; }
+    .db-lb-prog-fill { height: 4px; border-radius: 100px; background: linear-gradient(90deg,#2563EB,#4988c4); }
+
     @media (max-width: 1100px) { .db-stat-grid { grid-template-columns: repeat(2,1fr); } .db-main-grid { grid-template-columns: 1fr; } .db-col-right { display: grid; grid-template-columns: 1fr 1fr; } }
     @media (max-width: 640px)  { .db-chart-grid { grid-template-columns: 1fr; } .db-col-right { grid-template-columns: 1fr; } .db-stat-grid { grid-template-columns: 1fr 1fr; } }
   </style>
@@ -258,6 +293,45 @@ $recentSitIns = $db->query("
                 <a href="<?= $base ?>pages/admin/sitin.php" style="font-size:0.78rem;color:#2563EB;font-weight:600;text-decoration:none;">View all <?= $currentSitIn ?> sessions <i class="bi bi-arrow-right"></i></a>
               </div>
             <?php endif; ?>
+          <?php endif; ?>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="a-card">
+          <div class="a-card-header"><i class="bi bi-trophy"></i> Top Students 🏆
+            <span style="margin-left:auto;font-size:0.70rem;color:#94a3b8;font-weight:400;">By completed sessions</span>
+          </div>
+          <?php if (empty($topStudentsAdmin)): ?>
+            <div class="db-empty"><i class="bi bi-trophy"></i>No session data yet.</div>
+          <?php else: ?>
+          <div class="db-lb-list">
+            <?php foreach ($topStudentsAdmin as $i => $ts):
+              $rank = $i + 1;
+              $rankClass = $rank === 1 ? 'gold' : ($rank === 2 ? 'silver' : ($rank === 3 ? 'bronze' : 'other'));
+              $rankLabel = $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : ($rank === 3 ? '🥉' : '#'.$rank));
+              $tsInit = strtoupper(substr($ts['first_name'],0,1).substr($ts['last_name'],0,1));
+              $pts = (int)$ts['points'];
+              $pctToReward = min(100, round(($pts % 8) / 8 * 100));
+            ?>
+            <div class="db-lb-item">
+              <div class="db-lb-rank <?= $rankClass ?>"><?= $rankLabel ?></div>
+              <div class="db-lb-avatar">
+                <?php if (!empty($ts['profile_picture'])): ?>
+                  <img src="<?= htmlspecialchars($ts['profile_picture']) ?>" alt="">
+                <?php else: ?><?= $tsInit ?><?php endif; ?>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div class="db-lb-name"><?= htmlspecialchars($ts['first_name'].' '.$ts['last_name']) ?></div>
+                <div class="db-lb-course"><?= htmlspecialchars($ts['course'] ?? 'CCS') ?></div>
+              </div>
+              <div class="db-lb-right">
+                <div class="db-lb-sessions"><?= (int)$ts['total_sessions'] ?></div>
+                <div class="db-lb-pts"><?= $pts ?> pts · <?= 8 - ($pts % 8) ?> to reward</div>
+                <div class="db-lb-prog"><div class="db-lb-prog-fill" style="width:<?= $pctToReward ?>%"></div></div>
+              </div>
+            </div>
+            <?php endforeach; ?>
+          </div>
           <?php endif; ?>
         </div>
 

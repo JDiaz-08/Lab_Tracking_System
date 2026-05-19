@@ -323,26 +323,51 @@ $approvedCount = count(array_filter($reservations, fn($r) => $r['status'] === 'a
     <form method="POST" id="rejectForm">
       <input type="hidden" name="action" value="reject">
       <input type="hidden" name="res_id" id="rejectResId">
+      <input type="hidden" name="reject_note" id="rejectNoteInput">
       <div class="a-modal-body">
-        <p style="font-size:0.84rem;color:#475569;margin-bottom:1rem;">
-          You are rejecting the reservation for <strong id="rejectStudentName"></strong>.
-          Optionally provide a reason so the student knows what to do next.
+        <p style="font-size:0.84rem;color:#64748b;margin-bottom:1rem;">
+          Rejecting reservation for <strong id="rejectStudentName"></strong>. Please select a reason:
         </p>
-        <label style="font-size:0.80rem;font-weight:600;color:#1e293b;display:block;margin-bottom:5px;">
-          Rejection Reason <span style="font-size:0.72rem;color:#94a3b8;font-weight:400;">(optional)</span>
-        </label>
-        <select name="reject_note" class="a-minput" style="width:100%; margin-bottom:1rem;" required>
-          <option value="" disabled selected>— Select Reason —</option>
-          <option value="Lab is occupied">Lab is occupied</option>
-          <option value="Class on going">Class on going</option>
-          <option value="Lab is not available">Lab is not available</option>
-          <option value="PC under maintenance">PC under maintenance</option>
-          <option value="Outside operating hours">Outside operating hours</option>
-        </select>
+        <style>
+        .rej-options { display: flex; flex-direction: column; gap: 8px; }
+        .rej-option {
+          display: flex; align-items: center; gap: 10px;
+          padding: 0.75rem 1rem; border-radius: 9px;
+          border: 1.5px solid #e2e8f0; background: #f8fafc;
+          cursor: pointer; font-size: 0.855rem; font-weight: 500;
+          color: #334155; transition: all 0.16s; text-align: left; width: 100%;
+        }
+        .rej-option i { font-size: 1rem; color: #94a3b8; flex-shrink: 0; transition: color 0.16s; }
+        .rej-option:hover { border-color: #d97706; background: rgba(217,119,6,0.04); color: #92400e; }
+        .rej-option:hover i { color: #d97706; }
+        .rej-option.selected { border-color: #d97706; background: rgba(217,119,6,0.07); color: #92400e; font-weight: 700; }
+        .rej-option.selected i { color: #d97706; }
+        .rej-option.selected::after { content: '✓'; margin-left: auto; font-weight: 800; color: #d97706; }
+        </style>
+        <div class="rej-options">
+          <button type="button" class="rej-option" onclick="selectRejectReason(this,'Lab Unavailable')">
+            <i class="bi bi-door-closed"></i> Lab Unavailable
+          </button>
+          <button type="button" class="rej-option" onclick="selectRejectReason(this,'Class Ongoing')">
+            <i class="bi bi-person-video3"></i> Class Ongoing
+          </button>
+          <button type="button" class="rej-option" onclick="selectRejectReason(this,'Lab is Occupied')">
+            <i class="bi bi-people-fill"></i> Lab is Occupied
+          </button>
+          <button type="button" class="rej-option" onclick="selectRejectReason(this,'PC Under Maintenance')">
+            <i class="bi bi-tools"></i> PC Under Maintenance
+          </button>
+          <button type="button" class="rej-option" onclick="selectRejectReason(this,'Outside Operating Hours')">
+            <i class="bi bi-clock-history"></i> Outside Operating Hours
+          </button>
+        </div>
+        <p id="rej-error" style="display:none;color:#dc2626;font-size:0.75rem;margin-top:8px;">
+          Please select a reason before confirming.
+        </p>
       </div>
       <div class="a-modal-footer">
         <button type="button" class="a-btn a-btn-gray" onclick="document.getElementById('rejectModal').classList.remove('open')">Cancel</button>
-        <button type="submit" class="a-btn a-btn-yellow">
+        <button type="submit" class="a-btn a-btn-yellow" onclick="return validateReject()">
           <i class="bi bi-x-circle"></i> Confirm Reject
         </button>
       </div>
@@ -399,12 +424,30 @@ initAdminTable({
 function openRejectModal(id, name) {
   document.getElementById('rejectResId').value = id;
   document.getElementById('rejectStudentName').textContent = name;
-  document.querySelector('#rejectForm textarea').value = '';
+  document.getElementById('rejectNoteInput').value = '';
+  /* Reset all option selections */
+  document.querySelectorAll('.rej-option').forEach(b => b.classList.remove('selected'));
+  document.getElementById('rej-error').style.display = 'none';
   document.getElementById('rejectModal').classList.add('open');
 }
 document.getElementById('rejectModal')?.addEventListener('click', e => {
   if (e.target.id === 'rejectModal') document.getElementById('rejectModal').classList.remove('open');
 });
+
+function selectRejectReason(btn, reason) {
+  document.querySelectorAll('.rej-option').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('rejectNoteInput').value = reason;
+  document.getElementById('rej-error').style.display = 'none';
+}
+
+function validateReject() {
+  if (!document.getElementById('rejectNoteInput').value) {
+    document.getElementById('rej-error').style.display = 'block';
+    return false;
+  }
+  return true;
+}
 
 function openStartModal(id, name, stuId, lab, pc, purpose, date, time, sessions) {
   document.getElementById('startResId').value = id;

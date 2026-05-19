@@ -163,29 +163,58 @@ $_markReadUrl = (isset($base) ? $base : '../')
   </div>
 </nav>
 <script>
-(function() {
-  const btn  = document.getElementById('userDmToggle');
-  const icon = document.getElementById('userDmIcon');
+(function () {
+  /* ── Dark Mode ── */
+  const dmBtn  = document.getElementById('userDmToggle');
+  const dmIcon = document.getElementById('userDmIcon');
   function applyDark(on) {
     document.documentElement.classList.toggle('dark', on);
-    if (icon) icon.className = on ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+    if (dmIcon) dmIcon.className = on ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
     try { localStorage.setItem('ucDarkMode', on ? '1' : '0'); } catch(e) {}
   }
-  // Init icon based on current class
   applyDark(document.documentElement.classList.contains('dark'));
-  btn?.addEventListener('click', () => applyDark(!document.documentElement.classList.contains('dark')));
+  dmBtn?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    applyDark(!document.documentElement.classList.contains('dark'));
+  });
 
-  // Hamburger toggle
+  /* ── Hamburger ── */
   const ham = document.getElementById('userHamburger');
   const mob = document.getElementById('userMobileMenu');
-  ham?.addEventListener('click', () => {
-    ham.classList.toggle('open');
-    mob?.classList.toggle('open');
+  ham?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const isOpen = mob?.classList.contains('open');
+    mob?.classList.toggle('open', !isOpen);
+    ham.classList.toggle('open', !isOpen);
   });
-  // Notification dropdown
+
+  /* ── Notification Dropdown ── */
   const notifBtn = document.getElementById('notifToggle');
   const notifDd  = document.getElementById('notifDropdown');
-  notifBtn?.addEventListener('click', e => { e.stopPropagation(); notifDd?.classList.toggle('open'); });
-  document.addEventListener('click', () => notifDd?.classList.remove('open'));
+  let notifOpen  = false;
+
+  notifBtn?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    notifOpen = !notifOpen;
+    notifDd?.classList.toggle('open', notifOpen);
+  });
+
+  /* Close notification when clicking outside */
+  document.addEventListener('click', function(e) {
+    if (notifOpen && notifDd && !notifDd.contains(e.target) && e.target !== notifBtn) {
+      notifOpen = false;
+      notifDd.classList.remove('open');
+    }
+    /* Close mobile menu when clicking outside */
+    if (mob?.classList.contains('open') && !mob.contains(e.target) && e.target !== ham) {
+      mob.classList.remove('open');
+      ham?.classList.remove('open');
+    }
+  });
+
+  /* Stop clicks inside dropdown from closing it */
+  notifDd?.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
 })();
-</script>
+</script>

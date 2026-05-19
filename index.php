@@ -17,6 +17,18 @@ $featuredTestimonials = $db->query("
     LIMIT 6
 ")->fetchAll();
 
+/* Fetch top students for leaderboard (by total completed sit-ins) */
+$topStudents = $db->query("
+    SELECT u.id, u.first_name, u.last_name, u.course, u.profile_picture,
+           u.points,
+           COUNT(s.id) AS total_sessions
+    FROM users u
+    LEFT JOIN sit_in_logs s ON s.user_id = u.id AND s.logout_time IS NOT NULL
+    GROUP BY u.id
+    ORDER BY total_sessions DESC, u.points DESC
+    LIMIT 6
+")->fetchAll();
+
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
@@ -316,6 +328,47 @@ require_once __DIR__ . '/includes/navbar.php';
     </div>
   </div>
 </section>
+
+<!-- LEADERBOARD -->
+<?php if (!empty($topStudents)): ?>
+<section class="sim-leaderboard">
+  <div class="sim-container">
+    <div class="sim-section-hd reveal">
+      <span class="sim-eyebrow">🏆 Top Performers</span>
+      <h2 class="sim-section-h2">Student Leaderboard</h2>
+      <p class="sim-section-desc">Recognizing our most consistent lab users. Students earn points for every session and unlock extra sessions!</p>
+    </div>
+    <div class="sim-lb-grid">
+      <?php foreach ($topStudents as $i => $s):
+        $rank = $i + 1;
+        $rankClass = $rank === 1 ? 'gold' : ($rank === 2 ? 'silver' : ($rank === 3 ? 'bronze' : 'other'));
+        $rankLabel = $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : ($rank === 3 ? '🥉' : $rank));
+        $sInitials = strtoupper(substr($s['first_name'],0,1) . substr($s['last_name'],0,1));
+        $pointsLeft = 8 - ((int)$s['points'] % 8);
+      ?>
+      <div class="sim-lb-card reveal">
+        <div class="sim-lb-rank <?= $rankClass ?>"><?= $rankLabel ?></div>
+        <div class="sim-lb-avatar">
+          <?php if (!empty($s['profile_picture'])): ?>
+            <img src="<?= htmlspecialchars($s['profile_picture']) ?>" alt="">
+          <?php else: ?>
+            <?= $sInitials ?>
+          <?php endif; ?>
+        </div>
+        <div class="sim-lb-info">
+          <div class="sim-lb-name"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></div>
+          <div class="sim-lb-course"><?= htmlspecialchars($s['course'] ?? 'CCS') ?></div>
+        </div>
+        <div class="sim-lb-badge">
+          <div class="sim-lb-sessions"><?= (int)$s['total_sessions'] ?></div>
+          <div class="sim-lb-pts"><?= (int)$s['points'] ?> pts</div>
+        </div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
 
 <!-- TESTIMONIALS -->
 <?php if (!empty($featuredTestimonials)): ?>

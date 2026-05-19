@@ -591,3 +591,98 @@ ul { list-style: none; }
   .form-row { grid-template-columns:1fr; }
   .auth-right { padding:2.25rem 1.5rem; }
 }
+
+/* ===========================
+   LEADERBOARD SECTION
+   =========================== */
+.sim-leaderboard { padding: 6rem 0 5rem; background: var(--gray-50); }
+.sim-lb-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem; margin-top: 2.5rem;
+}
+@media (max-width: 900px) { .sim-lb-grid { grid-template-columns: 1fr; } }
+.sim-lb-card {
+  background: #fff; border: 1px solid var(--gray-200);
+  border-radius: 14px; padding: 1.5rem 1.35rem;
+  display: flex; align-items: center; gap: 1rem;
+  transition: all 0.2s; position: relative;
+}
+.sim-lb-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(15,40,84,0.08); }
+.sim-lb-rank {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 800;
+}
+.sim-lb-rank.gold   { background: linear-gradient(135deg,#f59e0b,#fbbf24); color: #fff; box-shadow: 0 4px 12px rgba(245,158,11,0.30); }
+.sim-lb-rank.silver { background: linear-gradient(135deg,#94a3b8,#cbd5e1); color: #fff; box-shadow: 0 4px 12px rgba(148,163,184,0.30); }
+.sim-lb-rank.bronze { background: linear-gradient(135deg,#d97706,#fbbf24); color: #fff; box-shadow: 0 4px 12px rgba(217,119,6,0.25); }
+.sim-lb-rank.other  { background: var(--gray-100); color: var(--gray-600); }
+.sim-lb-avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--navy), var(--mid));
+  color: #fff; font-size: 0.78rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.sim-lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sim-lb-info { flex: 1; min-width: 0; }
+.sim-lb-name { font-size: 0.9rem; font-weight: 700; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sim-lb-course { font-size: 0.72rem; color: var(--gray-400); margin-top: 1px; }
+.sim-lb-badge {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+}
+.sim-lb-sessions { font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; color: var(--navy); line-height: 1; }
+.sim-lb-pts { font-size: 0.65rem; color: var(--mid); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+.sim-lb-crown { font-size: 1rem; }
+
+/* ===========================
+   DARK MODE — LANDING PAGE
+   =========================== */
+html.dark body                    { background: #0d1117; color: #e6edf3; }
+html.dark .navbar                 { background: rgba(13,17,23,0.97); border-color: #30363d; }
+html.dark .nav-links a            { color: #8b949e; }
+html.dark .nav-links a:hover      { color: #e6edf3; }
+html.dark .mobile-menu            { background: #161b22; border-color: #30363d; }
+html.dark .mobile-menu a          { color: #8b949e; }
+html.dark .mobile-menu a:hover    { color: #e6edf3; }
+html.dark .sim-features           { background: #0d1117; }
+html.dark .sim-feat-cell          { background: #161b22; border-color: #30363d; }
+html.dark .sim-feat-cell:hover    { background: #21262d; }
+html.dark .sim-feat-ico           { background: rgba(88,166,255,0.08); color: #58a6ff; }
+html.dark .sim-feat-cell:hover .sim-feat-ico { background: #58a6ff; color: #0d1117; }
+html.dark .sim-feat-grid          { border-color: #30363d; background: #30363d; }
+html.dark .sim-feat-title         { color: #e6edf3; }
+html.dark .sim-feat-desc          { color: #8b949e; }
+html.dark .sim-section-h2         { color: #e6edf3; }
+html.dark .sim-section-desc       { color: #8b949e; }
+html.dark .sim-steps              { background: #161b22; }
+html.dark .sim-step-label         { color: #e6edf3; }
+html.dark .sim-step-desc          { color: #8b949e; }
+html.dark .sim-step-n             { box-shadow: 0 0 0 5px #161b22, 0 0 0 6.5px rgba(88,166,255,0.20); }
+html.dark .sim-cta                { background: #0d1117; }
+html.dark .sim-cta-h2             { color: #e6edf3; }
+html.dark .sim-cta-p              { color: #8b949e; }
+html.dark .sim-btn-outline        { color: #8b949e; border-color: #30363d; }
+html.dark .sim-btn-outline:hover  { color: #58a6ff; border-color: #58a6ff; }
+html.dark .sim-testimonials       { background: #0d1117; }
+html.dark .sim-test-card          { background: #161b22; border-color: #30363d; }
+html.dark .sim-test-card:hover    { border-color: rgba(88,166,255,0.25); box-shadow: 0 8px 30px rgba(0,0,0,0.40); }
+html.dark .sim-test-msg           { color: #8b949e; }
+html.dark .sim-test-name          { color: #e6edf3; }
+html.dark .sim-test-course        { color: #6e7681; }
+html.dark .sim-test-author        { border-color: #30363d; }
+html.dark .sim-leaderboard        { background: #161b22; }
+html.dark .sim-lb-card            { background: #21262d; border-color: #30363d; }
+html.dark .sim-lb-card:hover      { box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
+html.dark .sim-lb-name            { color: #e6edf3; }
+html.dark .sim-lb-sessions        { color: #e6edf3; }
+html.dark .sim-lb-rank.other      { background: #30363d; color: #8b949e; }
+/* Dark mode toggle for landing page */
+.lp-dm-toggle {
+  background: none; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px;
+  width: 30px; height: 30px; cursor: pointer; color: rgba(255,255,255,0.65);
+  display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+  transition: all 0.18s; flex-shrink: 0; margin-left: 0.5rem;
+}
+.lp-dm-toggle:hover { background: rgba(255,255,255,0.08); color: #fff; }
+html.dark .lp-dm-toggle { border-color: rgba(88,166,255,0.25); color: rgba(88,166,255,0.75); }

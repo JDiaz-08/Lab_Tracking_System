@@ -127,6 +127,7 @@ function _initDB(PDO $pdo): void {
         "ALTER TABLE sit_in_logs ADD COLUMN pc_number INTEGER",
         "ALTER TABLE reservations ADD COLUMN pc_number INTEGER",
         "ALTER TABLE reservations ADD COLUMN reject_note TEXT",
+        "ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0",
     ] as $sql) {
         try { $pdo->exec($sql); } catch (PDOException $e) { /* already exists */ }
     }

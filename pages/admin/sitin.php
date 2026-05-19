@@ -45,6 +45,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "Your sit-in session has been ended by the administrator. One session has been deducted."
                 ]);
 
+                /* ── Reward System: +2 points per session ── */
+                $pointsStmt = $db->prepare("SELECT remaining_sessions, points FROM users WHERE id = ?");
+                $pointsStmt->execute([$log['user_id']]);
+                $userRow = $pointsStmt->fetch();
+                $newPoints = (int)($userRow['points'] ?? 0) + 2;
+
+                if ($newPoints >= 8) {
+                    /* Award extra session, reset points */
+                    $db->prepare("UPDATE users SET points = 0, remaining_sessions = remaining_sessions + 1 WHERE id = ?")
+                       ->execute([$log['user_id']]);
+                    $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")
+                       ->execute([$log['user_id'],
+                           "🏆 Congratulations! You earned a FREE extra session as a reward for your lab consistency! Keep it up!"]);
+                } else {
+                    $db->prepare("UPDATE users SET points = ? WHERE id = ?")
+                       ->execute([$newPoints, $log['user_id']]);
+                }
+
                 $flash = 'Session ended. One session deducted.';
             } else {
                 $flash     = 'Session not found or already ended.';
