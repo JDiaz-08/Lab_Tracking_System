@@ -155,155 +155,172 @@ function initAdminTable({ tableId, bodyId, infoId, pagId, searchId, selectId }) 
    ============================================================ */
 
 function exportTableToCSV(tableId, filename = 'export.csv') {
-  const table = document.getElementById(tableId);
-  if (!table) return;
+  try {
+    const table = document.getElementById(tableId);
+    if (!table) throw new Error('Table element with ID "' + tableId + '" not found.');
 
-  let rowsToExport = [];
-  if (typeof table.getFilteredRows === 'function') {
-    rowsToExport = table.getFilteredRows();
-  } else {
-    rowsToExport = Array.from(table.querySelectorAll('tbody tr.a-data-row'));
-  }
+    let rowsToExport = [];
+    if (typeof table.getFilteredRows === 'function') {
+      rowsToExport = table.getFilteredRows();
+    } else {
+      rowsToExport = Array.from(table.querySelectorAll('tbody tr.a-data-row'));
+    }
 
-  // If there is an empty table message, don't export anything
-  if (rowsToExport.length === 1 && rowsToExport[0].classList.contains('a-table-empty')) {
-    rowsToExport = [];
-  }
+    // If there is an empty table message, don't export anything
+    if (rowsToExport.length === 1 && rowsToExport[0].classList.contains('a-table-empty')) {
+      rowsToExport = [];
+    }
 
-  const csvRows = [];
-  
-  // Headers
-  const headers = [];
-  table.querySelectorAll('thead th').forEach(th => {
-    // Expose plain text, remove standard sort symbols
-    let text = th.textContent.replace(/[⇅]/g, '').trim();
-    if (text.toLowerCase() === 'actions') return; // skip action column if present
-    headers.push('"' + text.replace(/"/g, '""') + '"');
-  });
-  csvRows.push(headers.join(','));
-
-  // Body
-  rowsToExport.forEach(row => {
-    const cols = [];
-    const cells = Array.from(row.querySelectorAll('td'));
+    const csvRows = [];
     
-    // Check if the table has an Action column (last cell containing buttons)
-    const headerCols = Array.from(table.querySelectorAll('thead th'));
-    const actionColIndex = headerCols.findIndex(th => th.textContent.toLowerCase().includes('action'));
-
-    cells.forEach((td, idx) => {
-      if (idx === actionColIndex) return; // skip action column
-      let text = td.textContent.trim().replace(/\s+/g, ' ');
-      cols.push('"' + text.replace(/"/g, '""') + '"');
+    // Headers
+    const headers = [];
+    table.querySelectorAll('thead th').forEach(th => {
+      // Expose plain text, remove standard sort symbols via unicode hex
+      let text = th.textContent.replace(/\u21c5/g, '').trim();
+      if (text.toLowerCase() === 'actions') return; // skip action column if present
+      headers.push('"' + text.replace(/"/g, '""') + '"');
     });
-    csvRows.push(cols.join(','));
-  });
+    csvRows.push(headers.join(','));
 
-  const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    // Body
+    rowsToExport.forEach(row => {
+      const cols = [];
+      const cells = Array.from(row.querySelectorAll('td'));
+      
+      // Check if the table has an Action column (last cell containing buttons)
+      const headerCols = Array.from(table.querySelectorAll('thead th'));
+      const actionColIndex = headerCols.findIndex(th => th.textContent.toLowerCase().includes('action'));
+
+      cells.forEach((td, idx) => {
+        if (idx === actionColIndex) return; // skip action column
+        let text = td.textContent.trim().replace(/\s+/g, ' ');
+        cols.push('"' + text.replace(/"/g, '""') + '"');
+      });
+      csvRows.push(cols.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    console.error('CSV Export Error: ', err);
+    alert('Failed to export CSV: ' + err.message);
+  }
 }
 
 function exportTableToPDF(tableId, title = 'Report', filename = 'report.pdf') {
-  const table = document.getElementById(tableId);
-  if (!table) return;
+  try {
+    const table = document.getElementById(tableId);
+    if (!table) throw new Error('Table element with ID "' + tableId + '" not found.');
 
-  let rowsToExport = [];
-  if (typeof table.getFilteredRows === 'function') {
-    rowsToExport = table.getFilteredRows();
-  } else {
-    rowsToExport = Array.from(table.querySelectorAll('tbody tr.a-data-row'));
-  }
-
-  // If empty table message, don't export
-  if (rowsToExport.length === 1 && rowsToExport[0].classList.contains('a-table-empty')) {
-    rowsToExport = [];
-  }
-
-  if (typeof window.jspdf === 'undefined') {
-    alert('The PDF generation library is still loading. Please try again in a moment.');
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'pt', 'a4');
-
-  // Headers
-  const headers = [];
-  const headerCols = Array.from(table.querySelectorAll('thead th'));
-  const actionColIndex = headerCols.findIndex(th => th.textContent.toLowerCase().includes('action'));
-
-  headerCols.forEach((th, idx) => {
-    if (idx === actionColIndex) return;
-    headers.push(th.textContent.replace(/[⇅]/g, '').trim());
-  });
-
-  // Body
-  const bodyData = [];
-  rowsToExport.forEach(row => {
-    const rowData = [];
-    const cells = Array.from(row.querySelectorAll('td'));
-    cells.forEach((td, idx) => {
-      if (idx === actionColIndex) return;
-      rowData.push(td.textContent.trim().replace(/\s+/g, ' '));
-    });
-    bodyData.push(rowData);
-  });
-
-  // Header Title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(26, 58, 107); // --a-navy (#1a3a6b)
-  doc.text(title, 40, 45);
-
-  // Subtitle / Date
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(100, 116, 139); // Slate-500
-  doc.text("Generated on: " + new Date().toLocaleString(), 40, 60);
-
-  // Premium border under title block
-  doc.setDrawColor(226, 232, 240); // --a-gray200
-  doc.setLineWidth(1);
-  doc.line(40, 70, 555, 70);
-
-  // Generate Table using jsPDF-AutoTable
-  doc.autoTable({
-    startY: 85,
-    head: [headers],
-    body: bodyData,
-    theme: 'striped',
-    headStyles: { 
-      fillColor: [26, 58, 107], 
-      textColor: [255, 255, 255], 
-      fontSize: 8.5, 
-      fontStyle: 'bold',
-      halign: 'left'
-    },
-    bodyStyles: { 
-      fontSize: 8, 
-      textColor: [30, 41, 59], 
-      cellPadding: 6 
-    },
-    alternateRowStyles: { 
-      fillColor: [248, 250, 252] 
-    },
-    margin: { top: 85, left: 40, right: 40, bottom: 40 },
-    didDrawPage: function(data) {
-      // Footer page numbers
-      const str = "Page " + doc.internal.getNumberOfPages();
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184); // Slate-400
-      doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 30);
+    let rowsToExport = [];
+    if (typeof table.getFilteredRows === 'function') {
+      rowsToExport = table.getFilteredRows();
+    } else {
+      rowsToExport = Array.from(table.querySelectorAll('tbody tr.a-data-row'));
     }
-  });
 
-  doc.save(filename);
+    // If empty table message, don't export
+    if (rowsToExport.length === 1 && rowsToExport[0].classList.contains('a-table-empty')) {
+      rowsToExport = [];
+    }
+
+    if (typeof window.jspdf === 'undefined') {
+      throw new Error('The PDF generation library (jsPDF) has not loaded yet. Please verify you have an internet connection and refresh the page.');
+    }
+
+    const { jsPDF } = window.jspdf;
+    
+    // Explicitly bind to window.jsPDF to ensure UMD plugins like jsPDF-AutoTable can register correctly
+    window.jsPDF = jsPDF;
+    
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    if (typeof doc.autoTable !== 'function') {
+      throw new Error('The jsPDF-AutoTable plugin failed to load. Please refresh the page and try again.');
+    }
+
+    // Headers
+    const headers = [];
+    const headerCols = Array.from(table.querySelectorAll('thead th'));
+    const actionColIndex = headerCols.findIndex(th => th.textContent.toLowerCase().includes('action'));
+
+    headerCols.forEach((th, idx) => {
+      if (idx === actionColIndex) return;
+      headers.push(th.textContent.replace(/\u21c5/g, '').trim());
+    });
+
+    // Body
+    const bodyData = [];
+    rowsToExport.forEach(row => {
+      const rowData = [];
+      const cells = Array.from(row.querySelectorAll('td'));
+      cells.forEach((td, idx) => {
+        if (idx === actionColIndex) return;
+        rowData.push(td.textContent.trim().replace(/\s+/g, ' '));
+      });
+      bodyData.push(rowData);
+    });
+
+    // Header Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(26, 58, 107); // --a-navy (#1a3a6b)
+    doc.text(title, 40, 45);
+
+    // Subtitle / Date
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139); // Slate-500
+    doc.text("Generated on: " + new Date().toLocaleString(), 40, 60);
+
+    // Premium border under title block
+    doc.setDrawColor(226, 232, 240); // --a-gray200
+    doc.setLineWidth(1);
+    doc.line(40, 70, 555, 70);
+
+    // Generate Table using jsPDF-AutoTable
+    doc.autoTable({
+      startY: 85,
+      head: [headers],
+      body: bodyData,
+      theme: 'striped',
+      headStyles: { 
+        fillColor: [26, 58, 107], 
+        textColor: [255, 255, 255], 
+        fontSize: 8.5, 
+        fontStyle: 'bold',
+        halign: 'left'
+      },
+      bodyStyles: { 
+        fontSize: 8, 
+        textColor: [30, 41, 59], 
+        cellPadding: 6 
+      },
+      alternateRowStyles: { 
+        fillColor: [248, 250, 252] 
+      },
+      margin: { top: 85, left: 40, right: 40, bottom: 40 },
+      didDrawPage: function(data) {
+        // Footer page numbers
+        const str = "Page " + doc.internal.getNumberOfPages();
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184); // Slate-400
+        doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 30);
+      }
+    });
+
+    doc.save(filename);
+  } catch (err) {
+    console.error('PDF Export Error: ', err);
+    alert('Failed to export PDF: ' + err.message);
+  }
 }
