@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $totalStudents = (int)$db->query("SELECT COUNT(*) FROM users")->fetchColumn();
 $currentSitIn  = (int)$db->query("SELECT COUNT(*) FROM sit_in_logs WHERE logout_time IS NULL")->fetchColumn();
 $totalSitIn    = (int)$db->query("SELECT COUNT(*) FROM sit_in_logs")->fetchColumn();
-$totalRes      = (int)$db->query("SELECT COUNT(*) FROM reservations WHERE status='pending'")->fetchColumn();
+$totalRes      = (int)$db->query("SELECT COUNT(*) FROM reservations WHERE status='pending' AND disabled_by_student = 0")->fetchColumn();
 
 $purposes = $db->query("
     SELECT purpose, COUNT(*) as cnt

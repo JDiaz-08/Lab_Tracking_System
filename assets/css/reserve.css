@@ -109,7 +109,7 @@
 .res-btn i { font-size: 0.85rem; }
 .res-btn-submit, .res-btn-reserve {
   background: #2563EB;
-  color: var(--white);
+  color: #ffffff;
   box-shadow: 0 2px 8px rgba(37,99,235,0.22);
 }
 .res-btn-submit:hover, .res-btn-reserve:hover {

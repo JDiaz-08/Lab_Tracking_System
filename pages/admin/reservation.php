@@ -112,6 +112,7 @@ $reservations = $db->query("
            u.remaining_sessions
     FROM reservations r
     JOIN users u ON u.id = r.user_id
+    WHERE r.disabled_by_student = 0
     ORDER BY r.created_at DESC
 ")->fetchAll();
 

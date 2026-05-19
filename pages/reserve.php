@@ -42,6 +42,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reser
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+
+    if ($action === 'disable_reservation') {
+        $resId = (int)($_POST['reservation_id'] ?? 0);
+        $stmt = $db->prepare("SELECT * FROM reservations WHERE id = ? AND user_id = ?");
+        $stmt->execute([$resId, $uid]);
+        $res = $stmt->fetch();
+
+        if ($res && ($res['disabled_by_student'] ?? 0) == 0) {
+            $db->prepare("UPDATE reservations SET disabled_by_student = 1 WHERE id = ?")->execute([$resId]);
+            $db->prepare("UPDATE pcs SET status = 'available', occupied_by = NULL WHERE lab_room = ? AND pc_number = ? AND occupied_by = ?")->execute([$res['lab_room'], $res['pc_number'], $uid]);
+            $resSuccess = "Reservation disabled successfully. Admin will not see this reservation while disabled.";
+        } else {
+            $errors[] = "Reservation cannot be disabled.";
+        }
+    }
+
+    if ($action === 'enable_reservation') {
+        $resId = (int)($_POST['reservation_id'] ?? 0);
+        $stmt = $db->prepare("SELECT * FROM reservations WHERE id = ? AND user_id = ?");
+        $stmt->execute([$resId, $uid]);
+        $res = $stmt->fetch();
+
+        if ($res && ($res['disabled_by_student'] ?? 0) == 1) {
+            $pcStmt = $db->prepare("SELECT * FROM pcs WHERE lab_room = ? AND pc_number = ?");
+            $pcStmt->execute([$res['lab_room'], $res['pc_number']]);
+            $pc = $pcStmt->fetch();
+
+            if ($pc && $pc['status'] === 'available') {
+                $db->prepare("UPDATE reservations SET disabled_by_student = 0 WHERE id = ?")->execute([$resId]);
+                $db->prepare("UPDATE pcs SET status = 'reserved', occupied_by = ? WHERE lab_room = ? AND pc_number = ?")->execute([$uid, $res['lab_room'], $res['pc_number']]);
+                $resSuccess = "Reservation enabled successfully and is now visible to the admin.";
+            } else {
+                $errors[] = "The PC is no longer available. Please book a new PC.";
+            }
+        } else {
+            $errors[] = "Reservation cannot be enabled.";
+        }
+    }
+}
+
 $myReservations = $db->prepare("SELECT * FROM reservations WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
 $myReservations->execute([$uid]);
 $myReservations = $myReservations->fetchAll();
@@ -151,8 +193,8 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
   display: flex; align-items: center; justify-content: center; gap: 7px;
   letter-spacing: 0.15px;
 }
-.res-btn-reserve { background: var(--navy); color: #fff; box-shadow: 0 2px 8px rgba(15,40,84,0.16); }
-.res-btn-reserve:hover:not(:disabled) { background: var(--blue); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15,40,84,0.22); }
+.res-btn-reserve { background: #3b82f6; color: #fff; box-shadow: 0 2px 8px rgba(59,130,246,0.16); }
+.res-btn-reserve:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(59,130,246,0.22); }
 .res-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
 /* ═══ PC GRID ═══ */
@@ -183,7 +225,7 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 0.5rem 0.25rem;
   border-radius: 8px;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid #16a34a;
   background: #fff;
   cursor: pointer;
   transition: all 0.15s;
@@ -191,10 +233,10 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
   position: relative;
 }
 .pc-cell:hover:not(.pc-occupied):not(.pc-disabled) {
-  border-color: var(--mid);
-  background: rgba(73,136,196,0.04);
+  border-color: #16a34a;
+  background: rgba(22, 163, 74, 0.04);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(15,40,84,0.08);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.08);
 }
 .pc-cell.pc-selected {
   border-color: #2563EB;
@@ -205,7 +247,7 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
   background: rgba(220,38,38,0.04);
   border-color: rgba(220,38,38,0.18);
   cursor: not-allowed;
-  opacity: 0.65;
+  opacity: 0.85;
 }
 .pc-cell.pc-disabled {
   background: #f1f5f9;
@@ -216,16 +258,18 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 .pc-cell-icon {
   font-size: 1rem;
   margin-bottom: 2px;
-  color: #64748b;
+  color: #16a34a;
 }
 .pc-cell.pc-selected .pc-cell-icon { color: #2563EB; }
 .pc-cell.pc-occupied .pc-cell-icon { color: #dc2626; }
 .pc-cell.pc-disabled .pc-cell-icon { color: #94a3b8; }
 .pc-cell-num {
-  font-size: 0.60rem; font-weight: 700; color: #94a3b8;
+  font-size: 0.60rem; font-weight: 700; color: #16a34a;
   letter-spacing: 0.3px;
 }
 .pc-cell.pc-selected .pc-cell-num { color: #2563EB; }
+.pc-cell.pc-occupied .pc-cell-num { color: #ef4444; }
+.pc-cell.pc-disabled .pc-cell-num { color: #94a3b8; }
 
 /* Legend */
 .pc-legend {
@@ -291,6 +335,63 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
   margin-top: 6px; padding: 6px 10px;
   background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.15);
   border-radius: 6px; font-size: 0.75rem; color: #991b1b;
+}
+
+.badge-disabled {
+  background: rgba(148, 163, 184, 0.1) !important;
+  color: #94a3b8 !important;
+  border: 1px solid rgba(148, 163, 184, 0.25) !important;
+}
+
+.res-log-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+html.dark .res-log-actions {
+  border-top-color: #2d3548;
+}
+
+.res-action-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.70rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.res-btn-disable {
+  background: rgba(239, 68, 68, 0.06);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.res-btn-disable:hover {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+.res-btn-enable {
+  background: rgba(16, 185, 129, 0.06);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.res-btn-enable:hover {
+  background: #10b981;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 html.dark .res-log-card { background: #1c2233; border-color: #2d3548; }
@@ -462,6 +563,13 @@ html.dark .res-log-reason { background: rgba(239,68,68,0.10); border-color: rgba
                       $displayStatus = 'expired';
                       $badgeCls = 'badge-done'; // Use gray badge for expired
                   }
+
+                  // Check if disabled by student
+                  $isDisabled = (($r['disabled_by_student'] ?? 0) == 1);
+                  if ($isDisabled) {
+                      $displayStatus = 'disabled';
+                      $badgeCls = 'badge-disabled';
+                  }
                 ?>
                   <div class="res-log-item">
                     <div class="res-log-date">
@@ -476,7 +584,30 @@ html.dark .res-log-reason { background: rgba(239,68,68,0.10); border-color: rgba
                       PC: <strong><?= $r['pc_number'] ? 'PC-'.str_pad($r['pc_number'], 2, '0', STR_PAD_LEFT) : 'Any' ?></strong><br>
                       Purpose: <?= htmlspecialchars($r['purpose']) ?>
                     </div>
-                    <?php if ($r['status'] === 'rejected' && !empty($r['reject_note'])): ?>
+
+                    <?php if ($displayStatus !== 'expired' && $r['status'] !== 'done' && $r['status'] !== 'rejected'): ?>
+                      <div class="res-log-actions">
+                        <?php if ($isDisabled): ?>
+                          <form method="POST" style="display:inline;">
+                            <input type="hidden" name="action" value="enable_reservation">
+                            <input type="hidden" name="reservation_id" value="<?= $r['id'] ?>">
+                            <button type="submit" class="res-action-btn res-btn-enable">
+                              <i class="bi bi-check-circle"></i> Enable
+                            </button>
+                          </form>
+                        <?php else: ?>
+                          <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to disable this reservation? The admin will not see this reservation while disabled.')">
+                            <input type="hidden" name="action" value="disable_reservation">
+                            <input type="hidden" name="reservation_id" value="<?= $r['id'] ?>">
+                            <button type="submit" class="res-action-btn res-btn-disable">
+                              <i class="bi bi-slash-circle"></i> Disable
+                            </button>
+                          </form>
+                        <?php endif; ?>
+                      </div>
+                    <?php endif; ?>
+
+                    <?php if ($r['status'] === 'rejected' && !$isDisabled && !empty($r['reject_note'])): ?>
                       <div class="res-log-reason">
                         <i class="bi bi-info-circle-fill"></i> <strong>Reason:</strong> <?= htmlspecialchars($r['reject_note']) ?>
                       </div>

@@ -58,6 +58,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'disable_reserved') {
+        $pcId = (int)($_POST['pc_id'] ?? 0);
+        if ($pcId > 0) {
+            $pcInfo = $db->prepare("SELECT * FROM pcs WHERE id = ?");
+            $pcInfo->execute([$pcId]);
+            $pc = $pcInfo->fetch();
+
+            if ($pc && $pc['status'] === 'reserved') {
+                // Find active/pending/approved reservations for this PC
+                $resStmt = $db->prepare("SELECT * FROM reservations WHERE lab_room = ? AND pc_number = ? AND status IN ('pending', 'approved')");
+                $resStmt->execute([$pc['lab_room'], $pc['pc_number']]);
+                $reservationsToCancel = $resStmt->fetchAll();
+
+                $rejectNote = 'PC Under Maintenance (Disabled by Admin)';
+                foreach ($reservationsToCancel as $r) {
+                    $db->prepare("UPDATE reservations SET status = 'rejected', reject_note = ? WHERE id = ?")->execute([$rejectNote, $r['id']]);
+                    $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
+                        $r['user_id'],
+                        "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the PC was disabled by the administrator."
+                    ]);
+                }
+
+                // Set PC status to disabled
+                $db->prepare("UPDATE pcs SET status = 'disabled', occupied_by = NULL WHERE id = ?")->execute([$pcId]);
+                $flash = "PC-" . str_pad($pc['pc_number'], 2, '0', STR_PAD_LEFT) . " disabled and associated reservations canceled.";
+            } else {
+                $flash = "PC not found or not reserved.";
+                $flashType = 'error';
+            }
+        }
+    }
+
     header('Location: pc-control.php?flash=' . urlencode($flash) . '&ft=' . urlencode($flashType));
     exit;
 }
@@ -267,6 +299,14 @@ foreach ($labRooms as $lab) {
                         <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
                         <button type="submit" class="pc-act-btn pc-act-release" title="Force Release">
                           <i class="bi bi-door-open"></i> Release
+                        </button>
+                      </form>
+                    <?php elseif ($pc['status'] === 'reserved'): ?>
+                      <form method="POST" style="display:inline;" onsubmit="return confirm('Disable PC-<?= $num ?> and cancel the active reservation?')">
+                        <input type="hidden" name="action" value="disable_reserved">
+                        <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
+                        <button type="submit" class="pc-act-btn pc-act-release" title="Disable">
+                          <i class="bi bi-slash-circle"></i> Disable
                         </button>
                       </form>
                     <?php endif; ?>

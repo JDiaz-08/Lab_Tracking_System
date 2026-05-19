@@ -56,6 +56,7 @@ function _initDB(PDO $pdo): void {
             time_slot  TEXT    NOT NULL,
             purpose    TEXT,
             status     TEXT    DEFAULT 'pending',
+            disabled_by_student INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
@@ -128,6 +129,7 @@ function _initDB(PDO $pdo): void {
         "ALTER TABLE reservations ADD COLUMN pc_number INTEGER",
         "ALTER TABLE reservations ADD COLUMN reject_note TEXT",
         "ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0",
+        "ALTER TABLE reservations ADD COLUMN disabled_by_student INTEGER DEFAULT 0",
     ] as $sql) {
         try { $pdo->exec($sql); } catch (PDOException $e) { /* already exists */ }
     }
