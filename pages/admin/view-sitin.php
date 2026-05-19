@@ -26,6 +26,9 @@ $records = $db->query("
   <title>Sit-in Records — UC CompLab Admin</title>
   <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+  <!-- PDF Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 <?php require_once __DIR__ . '/../../includes/admin-navbar.php'; ?>
@@ -48,9 +51,21 @@ $records = $db->query("
             </select>
             <span>entries per page</span>
           </div>
-          <div class="a-search-wrap">
-            <label>Search:</label>
-            <input type="text" id="recSearch" class="a-search-box" placeholder="Search..."/>
+
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="a-export-buttons" style="display: flex; gap: 0.4rem;">
+              <button onclick="exportTableToCSV('recTable', 'sit_in_records.csv')" class="a-btn a-btn-sm a-btn-green" title="Export current records to CSV">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+              </button>
+              <button onclick="exportTableToPDF('recTable', 'UC CompLab — Sit-in Records', 'sit_in_records.pdf')" class="a-btn a-btn-sm a-btn-red" title="Export current records to a high-fidelity PDF">
+                <i class="bi bi-file-pdf"></i> Export PDF
+              </button>
+            </div>
+
+            <div class="a-search-wrap" style="margin: 0;">
+              <label>Search:</label>
+              <input type="text" id="recSearch" class="a-search-box" placeholder="Search..."/>
+            </div>
           </div>
         </div>
 
