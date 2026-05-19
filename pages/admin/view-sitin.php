@@ -119,7 +119,7 @@ $records = $db->query("
   </div>
 </div>
 
-<script src="<?= $base ?>assets/js/admin.js"></script>
+<script src="<?= $base ?>assets/js/admin.js?v=<?= time() ?>"></script>
 <script>
 initAdminTable({
   tableId: 'recTable',
