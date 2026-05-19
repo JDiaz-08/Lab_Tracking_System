@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pc && $pc['status'] === 'occupied' && $pc['occupied_by']) {
                 // End the sit-in session
                 $db->prepare("
-                    UPDATE sit_in_logs SET logout_time = CURRENT_TIMESTAMP, status = 'done'
+                    UPDATE sit_in_logs SET logout_time = ?, status = 'done'
                     WHERE user_id = ? AND logout_time IS NULL AND lab_room = ?
-                ")->execute([$pc['occupied_by'], $pc['lab_room']]);
+                ")->execute([date('Y-m-d H:i:s'), $pc['occupied_by'], $pc['lab_room']]);
 
                 // Deduct session
                 $db->prepare("UPDATE users SET remaining_sessions = MAX(0, remaining_sessions - 1) WHERE id = ?")->execute([$pc['occupied_by']]);
@@ -84,13 +84,14 @@ foreach ($labRooms as $lab) {
 /* Stats per lab */
 $labStats = [];
 foreach ($labRooms as $lab) {
-    $avail    = 0; $occupied = 0; $disabled = 0;
+    $avail    = 0; $occupied = 0; $disabled = 0; $reserved = 0;
     foreach ($allPcs[$lab] as $pc) {
         if ($pc['status'] === 'available') $avail++;
         elseif ($pc['status'] === 'occupied') $occupied++;
+        elseif ($pc['status'] === 'reserved') $reserved++;
         else $disabled++;
     }
-    $labStats[$lab] = ['available' => $avail, 'occupied' => $occupied, 'disabled' => $disabled];
+    $labStats[$lab] = ['available' => $avail, 'occupied' => $occupied, 'disabled' => $disabled, 'reserved' => $reserved];
 }
 ?>
 <!DOCTYPE html>
@@ -131,6 +132,7 @@ foreach ($labRooms as $lab) {
     }
     .pc-stat-avail   { background: rgba(22,163,74,0.06); border-color: rgba(22,163,74,0.18); color: #15803d; }
     .pc-stat-occ     { background: rgba(220,38,38,0.06); border-color: rgba(220,38,38,0.18); color: #dc2626; }
+    .pc-stat-res     { background: rgba(217,119,6,0.06); border-color: rgba(217,119,6,0.18); color: #d97706; }
     .pc-stat-dis     { background: rgba(100,116,139,0.06); border-color: rgba(100,116,139,0.18); color: #64748b; }
     .pc-stat-chip i  { font-size: 0.68rem; }
 
@@ -150,10 +152,12 @@ foreach ($labRooms as $lab) {
     .pc-card:hover { box-shadow: 0 2px 10px rgba(15,40,84,0.08); transform: translateY(-1px); }
     .pc-card.pc-avail  { border-color: rgba(22,163,74,0.25); }
     .pc-card.pc-occ    { border-color: rgba(220,38,38,0.25); background: rgba(220,38,38,0.02); }
+    .pc-card.pc-res    { border-color: rgba(217,119,6,0.25); background: rgba(217,119,6,0.02); }
     .pc-card.pc-dis    { border-color: #e2e8f0; background: #f8fafc; opacity: 0.6; }
     .pc-card-icon { font-size: 1.2rem; margin-bottom: 3px; }
     .pc-avail .pc-card-icon { color: #16a34a; }
     .pc-occ   .pc-card-icon { color: #dc2626; }
+    .pc-res   .pc-card-icon { color: #d97706; }
     .pc-dis   .pc-card-icon { color: #94a3b8; }
     .pc-card-num { font-size: 0.62rem; font-weight: 700; color: #64748b; margin-bottom: 3px; }
     .pc-card-stu { font-size: 0.55rem; color: #94a3b8; line-height: 1.3; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -218,6 +222,9 @@ foreach ($labRooms as $lab) {
               <div class="pc-stat-chip pc-stat-occ">
                 <i class="bi bi-person-fill"></i> <?= $labStats[$lab]['occupied'] ?> Occupied
               </div>
+              <div class="pc-stat-chip pc-stat-res">
+                <i class="bi bi-bookmark-fill"></i> <?= $labStats[$lab]['reserved'] ?> Reserved
+              </div>
               <div class="pc-stat-chip pc-stat-dis">
                 <i class="bi bi-slash-circle"></i> <?= $labStats[$lab]['disabled'] ?> Disabled
               </div>
@@ -227,12 +234,12 @@ foreach ($labRooms as $lab) {
               <?php foreach ($allPcs[$lab] as $pc):
                 $num = str_pad($pc['pc_number'], 2, '0', STR_PAD_LEFT);
                 $cls = $pc['status'] === 'available' ? 'pc-avail'
-                     : ($pc['status'] === 'occupied' ? 'pc-occ' : 'pc-dis');
+                     : ($pc['status'] === 'occupied' ? 'pc-occ' : ($pc['status'] === 'reserved' ? 'pc-res' : 'pc-dis'));
               ?>
                 <div class="pc-card <?= $cls ?>">
                   <i class="bi bi-display pc-card-icon"></i>
                   <div class="pc-card-num">PC-<?= $num ?></div>
-                  <?php if ($pc['status'] === 'occupied' && $pc['student_name']): ?>
+                  <?php if (($pc['status'] === 'occupied' || $pc['status'] === 'reserved') && $pc['student_name']): ?>
                     <div class="pc-card-stu" title="<?= htmlspecialchars($pc['student_name']) ?>"><?= htmlspecialchars($pc['student_name']) ?></div>
                   <?php endif; ?>
                   <div class="pc-card-actions">

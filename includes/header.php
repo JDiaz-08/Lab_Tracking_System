@@ -12,5 +12,15 @@ if (!isset($base)) $base = '';
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <script>
+    // Apply dark mode immediately to prevent flash
+    (function(){
+      try {
+        if (localStorage.getItem('ucDarkMode') === '1') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
 </head>
-<body>
+<body>

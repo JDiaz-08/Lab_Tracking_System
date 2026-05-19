@@ -24,9 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($log) {
                 $db->prepare(
                     "UPDATE sit_in_logs
-                     SET logout_time = CURRENT_TIMESTAMP, status = 'done'
+                     SET logout_time = ?, status = 'done'
                      WHERE id = ? AND logout_time IS NULL"
-                )->execute([$sid]);
+                )->execute([date('Y-m-d H:i:s'), $sid]);
 
                 $db->prepare(
                     "UPDATE users SET remaining_sessions = MAX(0, remaining_sessions - 1) WHERE id = ?"
@@ -87,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $flashType = 'error';
                 } else {
                     $db->prepare(
-                        "INSERT INTO sit_in_logs (user_id, lab_room, purpose, status, pc_number) VALUES (?, ?, ?, 'active', ?)"
-                    )->execute([$uid, $lab, $purpose, $pcNum ?: null]);
+                        "INSERT INTO sit_in_logs (user_id, lab_room, purpose, status, pc_number, login_time) VALUES (?, ?, ?, 'active', ?, ?)"
+                    )->execute([$uid, $lab, $purpose, $pcNum ?: null, date('Y-m-d H:i:s')]);
 
                     /* Mark PC as occupied */
                     if ($pcNum > 0) {
@@ -280,7 +280,7 @@ $labRooms = ['524','526','528','530','542','Mac Laboratory'];
                     <td><?= (int)$row['remaining_sessions'] ?></td>
                     <td><span class="a-badge badge-active">Active</span></td>
                     <td>
-                      <form method="POST" style="display:inline;"
+                      <form method="POST" action="sitin.php" style="display:inline;"
                         onsubmit="return confirm('End this session? One session will be deducted.')">
                         <input type="hidden" name="action" value="logout_sitin">
                         <input type="hidden" name="sit_id" value="<?= (int)$row['id'] ?>">

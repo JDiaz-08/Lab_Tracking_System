@@ -36,10 +36,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reser
         $errors[] = 'Please select a PC from the grid.';
     } else {
         $db->prepare("INSERT INTO reservations (user_id, lab_room, date, time_slot, purpose, pc_number) VALUES (?, ?, ?, ?, ?, ?)")->execute([$uid, $labRoom, $date, $timeIn, $purpose, $pcNumber]);
+        $db->prepare("UPDATE pcs SET status = 'reserved', occupied_by = ? WHERE lab_room = ? AND pc_number = ?")->execute([$uid, $labRoom, $pcNumber]);
         $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([$uid, "Reservation for Lab {$labRoom} (PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT).") on " . date('F j, Y', strtotime($date)) . " at {$timeIn} submitted."]);
         $resSuccess = "Reservation submitted for Lab {$labRoom}, PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT)." on " . date('F j, Y', strtotime($date)) . ". You will be notified once approved.";
     }
 }
+
+$myReservations = $db->prepare("SELECT * FROM reservations WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
+$myReservations->execute([$uid]);
+$myReservations = $myReservations->fetchAll();
 
 $initials = strtoupper(substr($user['first_name'],0,1) . substr($user['last_name'],0,1));
 $sessBadgeClass = $remainingSessions > 10 ? 'sess-ok' : ($remainingSessions > 0 ? 'sess-warn' : 'sess-empty');
@@ -50,11 +55,20 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 ?>
 <style>
 /* ── Reserve page ── */
-.res-page-wrap { max-width: 920px; margin: 0 auto; }
+.res-page-wrap { max-width: 1280px; margin: 0 auto; }
 .res-page-title {
   font-family: var(--font-display);
   font-size: 1.55rem; font-weight: 800; color: var(--navy);
-  text-align: center; margin-bottom: 1.5rem;
+  text-align: left; margin-bottom: 1.5rem;
+}
+.res-layout {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 992px) {
+  .res-layout { grid-template-columns: 1fr; }
 }
 
 /* Card */
@@ -228,7 +242,17 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 .pc-legend-dot.avail { background: #16a34a; }
 .pc-legend-dot.occupied { background: #dc2626; }
 .pc-legend-dot.disabled { background: #94a3b8; }
+.pc-legend-dot.reserved { background: #d97706; }
 .pc-legend-dot.selected { background: #2563EB; }
+
+/* Software Section inside Reserve */
+.soft-grid-section { margin-top: 1rem; border-top: 1px dashed #e2e8f0; padding-top: 1rem; }
+.soft-grid-title { font-size: 0.78rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
+.soft-grid-title i { color: #16a34a; }
+.soft-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.soft-item { display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.75rem; color: #475569; }
+.soft-item img { width: 14px; height: 14px; object-fit: contain; }
+.soft-item i { color: #64748b; font-size: 0.8rem; }
 
 .pc-selected-label {
   display: none; align-items: center; gap: 6px;
@@ -238,6 +262,44 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 }
 .pc-selected-label.show { display: flex; }
 .pc-selected-label i { color: #2563EB; }
+
+/* ═══ RESERVATION LOG ═══ */
+.res-log-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(15,40,84,0.06);
+  overflow: hidden;
+}
+.res-log-header {
+  padding: 1.1rem 1.35rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-family: var(--font-display); font-size: 0.95rem; font-weight: 800; color: var(--navy);
+  display: flex; align-items: center; gap: 8px;
+}
+.res-log-header i { color: var(--mid); }
+.res-log-body { padding: 1.25rem 1.35rem; }
+.res-log-item {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 1rem; margin-bottom: 1rem;
+}
+.res-log-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.res-log-date { font-size: 0.85rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.res-log-details { font-size: 0.75rem; color: #64748b; line-height: 1.5; }
+.res-log-details strong { color: var(--navy); }
+.res-log-reason {
+  margin-top: 6px; padding: 6px 10px;
+  background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.15);
+  border-radius: 6px; font-size: 0.75rem; color: #991b1b;
+}
+
+html.dark .res-log-card { background: #1c2233; border-color: #2d3548; }
+html.dark .res-log-header { border-color: #2d3548; color: #e2e8f0; }
+html.dark .res-log-item { border-color: #2d3548; }
+html.dark .res-log-date { color: #e2e8f0; }
+html.dark .res-log-details { color: #a0aec0; }
+html.dark .res-log-details strong { color: #e2e8f0; }
+html.dark .res-log-reason { background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.20); color: #fca5a5; }
 
 @media (max-width: 680px) {
   .res-form-grid { grid-template-columns: 1fr; }
@@ -267,8 +329,11 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
         </div>
       <?php endif; ?>
 
-      <!-- RESERVATION CARD -->
-      <div class="res-card">
+      <div class="res-layout">
+        <!-- LEFT COLUMN: RESERVATION FORM -->
+        <div class="res-form-col">
+          <!-- RESERVATION CARD -->
+          <div class="res-card">
         <div class="res-card-head">
           <div class="res-card-ico"><i class="bi bi-calendar-plus"></i></div>
           <div>
@@ -351,6 +416,14 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
               </div>
             </div>
 
+            <!-- Software Section -->
+            <div class="soft-grid-section" id="softGridSection" style="display:none;">
+              <div class="soft-grid-title"><i class="bi bi-box-seam"></i> Installed Software in this Lab</div>
+              <div class="soft-list" id="softGridContainer">
+                 <!-- Populated by JS -->
+              </div>
+            </div>
+
             <div class="res-sess-row" style="margin-bottom:1rem;">
               <span class="res-sess-lbl"><i class="bi bi-hourglass-split"></i> Sessions Remaining</span>
               <span class="res-sess-badge <?= $sessBadgeClass ?>"><?= $remainingSessions ?> / 30</span>
@@ -363,6 +436,59 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 
         </div>
       </div>
+        </div><!-- end res-form-col -->
+
+        <!-- RIGHT COLUMN: RESERVATION LOG -->
+        <div class="res-log-col">
+          <div class="res-log-card">
+            <div class="res-log-header">
+              <i class="bi bi-clock-history"></i> My Recent Reservations
+            </div>
+            <div class="res-log-body">
+              <?php if (empty($myReservations)): ?>
+                <div style="text-align:center; color:#94a3b8; font-size:0.85rem; padding:1rem 0;">
+                  You have no recent reservations.
+                </div>
+              <?php else: ?>
+                <?php foreach ($myReservations as $r):
+                  $badgeCls = 'badge-pending';
+                  if ($r['status'] === 'approved') $badgeCls = 'badge-approved';
+                  if ($r['status'] === 'rejected') $badgeCls = 'badge-rejected';
+                  if ($r['status'] === 'done')     $badgeCls = 'badge-done';
+
+                  // Check if expired
+                  $displayStatus = $r['status'];
+                  if (in_array($r['status'], ['pending','approved']) && $r['date'] < date('Y-m-d')) {
+                      $displayStatus = 'expired';
+                      $badgeCls = 'badge-done'; // Use gray badge for expired
+                  }
+                ?>
+                  <div class="res-log-item">
+                    <div class="res-log-date">
+                      <span><?= date('M j, Y', strtotime($r['date'])) ?></span>
+                      <span class="a-badge <?= $badgeCls ?>" style="font-size:0.65rem; padding:3px 8px; border-radius:4px; text-transform:uppercase;">
+                        <?= htmlspecialchars($displayStatus) ?>
+                      </span>
+                    </div>
+                    <div class="res-log-details">
+                      Lab: <strong><?= htmlspecialchars($r['lab_room']) ?></strong><br>
+                      Time: <strong><?= htmlspecialchars($r['time_slot']) ?></strong><br>
+                      PC: <strong><?= $r['pc_number'] ? 'PC-'.str_pad($r['pc_number'], 2, '0', STR_PAD_LEFT) : 'Any' ?></strong><br>
+                      Purpose: <?= htmlspecialchars($r['purpose']) ?>
+                    </div>
+                    <?php if ($r['status'] === 'rejected' && !empty($r['reject_note'])): ?>
+                      <div class="res-log-reason">
+                        <i class="bi bi-info-circle-fill"></i> <strong>Reason:</strong> <?= htmlspecialchars($r['reject_note']) ?>
+                      </div>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div><!-- end res-log-col -->
+
+      </div><!-- end res-layout -->
 
     </div>
   </div>
@@ -397,6 +523,7 @@ labSelect.addEventListener('change', function() {
         let cls = '';
         let disabled = false;
         if (pc.status === 'occupied') { cls = 'pc-occupied'; disabled = true; }
+        else if (pc.status === 'reserved') { cls = 'pc-occupied'; disabled = true; }
         else if (pc.status === 'disabled') { cls = 'pc-disabled'; disabled = true; }
         grid += `<div class="pc-cell ${cls}" data-pc="${pc.pc_number}" ${disabled ? '' : 'onclick="selectPc('+pc.pc_number+')"'}>
                    <i class="bi bi-display pc-cell-icon"></i>
@@ -409,6 +536,25 @@ labSelect.addEventListener('change', function() {
     .catch(() => {
       pcContainer.innerHTML = '<div class="pc-grid-empty"><i class="bi bi-exclamation-triangle"></i> Failed to load PCs.</div>';
     });
+
+  const softSec = document.getElementById('softGridSection');
+  const softCon = document.getElementById('softGridContainer');
+  fetch('<?= $base ?>pages/api/lab-software.php?lab=' + encodeURIComponent(lab))
+    .then(r => r.json())
+    .then(softs => {
+      if (softs.length) {
+        let h = '';
+        softs.forEach(s => {
+          let ico = s.icon ? `<img src="${s.icon}" alt="">` : `<i class="bi bi-window"></i>`;
+          h += `<div class="soft-item">${ico} <span>${s.software_name} ${s.version || ''}</span></div>`;
+        });
+        softCon.innerHTML = h;
+        softSec.style.display = 'block';
+      } else {
+        softSec.style.display = 'none';
+      }
+    })
+    .catch(() => { softSec.style.display = 'none'; });
 });
 
 function selectPc(num) {

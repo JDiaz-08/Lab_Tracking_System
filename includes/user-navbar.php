@@ -1,6 +1,17 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+/* Ensure $db is available for notifications even on pages that don't init it */
+if (!isset($db) && !empty($_SESSION['user_id'])) {
+    if (!function_exists('getDB')) {
+        require_once __DIR__ . '/../config/database.php';
+    }
+    if (!function_exists('getUnreadCount')) {
+        require_once __DIR__ . '/../includes/auth.php';
+    }
+    $db = getDB();
+}
+
 $_unread      = isset($db) ? getUnreadCount($db) : 0;
 $_notifs      = isset($db) ? getRecentNotifications($db) : [];
 $_currentUser = $_SESSION['user'] ?? [];
@@ -120,6 +131,9 @@ $_markReadUrl = (isset($base) ? $base : '../')
       <span class="user-name-short"><?= htmlspecialchars($_currentUser['first_name'] ?? '') ?></span>
     </div>
 
+    <button class="dm-toggle" id="userDmToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <i class="bi bi-moon-fill" id="userDmIcon"></i>
+    </button>
     <button class="hamburger user-hamburger" id="userHamburger" aria-label="Toggle menu">
       <span></span><span></span><span></span>
     </button>
@@ -148,3 +162,30 @@ $_markReadUrl = (isset($base) ? $base : '../')
     <a href="<?= $base ?>pages/logout.php" class="mobile-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
   </div>
 </nav>
+<script>
+(function() {
+  const btn  = document.getElementById('userDmToggle');
+  const icon = document.getElementById('userDmIcon');
+  function applyDark(on) {
+    document.documentElement.classList.toggle('dark', on);
+    if (icon) icon.className = on ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+    try { localStorage.setItem('ucDarkMode', on ? '1' : '0'); } catch(e) {}
+  }
+  // Init icon based on current class
+  applyDark(document.documentElement.classList.contains('dark'));
+  btn?.addEventListener('click', () => applyDark(!document.documentElement.classList.contains('dark')));
+
+  // Hamburger toggle
+  const ham = document.getElementById('userHamburger');
+  const mob = document.getElementById('userMobileMenu');
+  ham?.addEventListener('click', () => {
+    ham.classList.toggle('open');
+    mob?.classList.toggle('open');
+  });
+  // Notification dropdown
+  const notifBtn = document.getElementById('notifToggle');
+  const notifDd  = document.getElementById('notifDropdown');
+  notifBtn?.addEventListener('click', e => { e.stopPropagation(); notifDd?.classList.toggle('open'); });
+  document.addEventListener('click', () => notifDd?.classList.remove('open'));
+})();
+</script>

@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Manila');
 define('DB_PATH', __DIR__ . '/../data/lab.db');
 
 function getDB(): PDO {
@@ -125,6 +126,7 @@ function _initDB(PDO $pdo): void {
         "ALTER TABLE users ADD COLUMN profile_picture TEXT",
         "ALTER TABLE sit_in_logs ADD COLUMN pc_number INTEGER",
         "ALTER TABLE reservations ADD COLUMN pc_number INTEGER",
+        "ALTER TABLE reservations ADD COLUMN reject_note TEXT",
     ] as $sql) {
         try { $pdo->exec($sql); } catch (PDOException $e) { /* already exists */ }
     }
