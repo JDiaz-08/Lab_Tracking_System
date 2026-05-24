@@ -350,8 +350,7 @@ require_once __DIR__ . '/includes/navbar.php';
           <div class="sim-lb-course"><?= htmlspecialchars($s['course'] ?? 'CCS') ?></div>
         </div>
         <div class="sim-lb-badge">
-          <div class="sim-lb-sessions"><?= (int)$s['total_sessions'] ?></div>
-          <div class="sim-lb-pts"><?= (int)$s['points'] ?> pts</div>
+          <div class="sim-lb-pts"><?= (int)$s['points'] ?> PTS</div>
         </div>
       </div>
       <?php endforeach; ?>
