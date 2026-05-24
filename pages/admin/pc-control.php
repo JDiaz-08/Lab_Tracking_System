@@ -54,13 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newSt = trim($_POST['new_status'] ?? '');
         if (in_array($lab, $labRooms) && in_array($newSt, ['available', 'unavailable', 'maintenance', 'occupied'])) {
             if ($newSt === 'available') {
-                // Set all maintenance PCs in this lab to available
+                // Set all maintenance and manually occupied PCs in this lab to available
                 $db->prepare("
                     UPDATE pcs 
                     SET status = 'available' 
-                    WHERE lab_room = ? AND status IN ('disabled', 'unavailable', 'maintenance')
+                    WHERE lab_room = ? AND (status IN ('disabled', 'unavailable', 'maintenance') OR (status = 'occupied' AND occupied_by IS NULL))
                 ")->execute([$lab]);
-                $flash = "All maintenance PCs in Lab $lab are now Available.";
+                $flash = "All maintenance and manually occupied PCs in Lab $lab are now Available.";
             } elseif ($newSt === 'maintenance' || $newSt === 'unavailable') {
                 // Set all available PCs in this lab to maintenance
                 $db->prepare("
@@ -308,7 +308,7 @@ foreach ($labRooms as $lab) {
             <div class="pc-bulk-actions" style="margin-bottom: 1.25rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 0.6rem 0.85rem; border-radius: 10px;">
               <span style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-right: 0.5rem;"><i class="bi bi-gear-fill"></i> BULK ACTIONS (Lab <?= htmlspecialchars($lab) ?>):</span>
               
-              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all maintenance PCs in Lab <?= htmlspecialchars($lab) ?> to Available?')">
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all maintenance and manually occupied PCs in Lab <?= htmlspecialchars($lab) ?> to Available?')">
                 <input type="hidden" name="action" value="bulk_status">
                 <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
                 <input type="hidden" name="new_status" value="available">
