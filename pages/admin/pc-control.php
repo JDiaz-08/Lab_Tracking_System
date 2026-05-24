@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->prepare("
                     UPDATE pcs 
                     SET status = 'maintenance' 
-                    WHERE lab_room = ? AND status = 'available'
+                    WHERE lab_room = ? AND (status = 'available' OR (status = 'occupied' AND occupied_by IS NULL))
                 ")->execute([$lab]);
 
                 // Cancel reservations for this lab
@@ -82,15 +82,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the laboratory is undergoing maintenance."
                     ]);
                 }
-                $flash = "All available PCs in Lab $lab have been set to Maintenance, and all pending/approved reservations for this lab have been rejected.";
+                $flash = "All applicable PCs in Lab $lab have been set to Maintenance, and all pending/approved reservations for this lab have been rejected.";
             } elseif ($newSt === 'occupied') {
                 // Set all available PCs in this lab to occupied
                 $db->prepare("
                     UPDATE pcs 
                     SET status = 'occupied' 
-                    WHERE lab_room = ? AND status = 'available'
+                    WHERE lab_room = ? AND status IN ('available', 'maintenance', 'disabled', 'unavailable')
                 ")->execute([$lab]);
-                $flash = "All available PCs in Lab $lab have been set to Occupied.";
+                $flash = "All applicable PCs in Lab $lab have been set to Occupied.";
             }
         }
     }
@@ -317,7 +317,7 @@ foreach ($labRooms as $lab) {
                 </button>
               </form>
 
-              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all currently available PCs in Lab <?= htmlspecialchars($lab) ?> to Maintenance?')">
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all applicable PCs in Lab <?= htmlspecialchars($lab) ?> to Maintenance?')">
                 <input type="hidden" name="action" value="bulk_status">
                 <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
                 <input type="hidden" name="new_status" value="maintenance">
@@ -326,7 +326,7 @@ foreach ($labRooms as $lab) {
                 </button>
               </form>
 
-              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all currently available PCs in Lab <?= htmlspecialchars($lab) ?> to Occupied?')">
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all applicable PCs in Lab <?= htmlspecialchars($lab) ?> to Occupied?')">
                 <input type="hidden" name="action" value="bulk_status">
                 <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
                 <input type="hidden" name="new_status" value="occupied">
