@@ -7,8 +7,9 @@ require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 $db = getDB();
 
-// Migrate/clean up any remaining reserved status from old DB records
+// Migrate/clean up any remaining reserved/disabled/unavailable statuses from old DB records to maintenance or available
 $db->exec("UPDATE pcs SET status = 'available', occupied_by = NULL WHERE status = 'reserved'");
+$db->exec("UPDATE pcs SET status = 'maintenance', occupied_by = NULL WHERE status IN ('disabled', 'unavailable')");
 
 $flash     = '';
 $flashType = 'success';
@@ -21,10 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pcId   = (int)($_POST['pc_id'] ?? 0);
         $newSt  = trim($_POST['new_status'] ?? '');
         if ($pcId > 0 && in_array($newSt, ['available', 'disabled', 'unavailable', 'maintenance'])) {
-            $db->prepare("UPDATE pcs SET status = ?, occupied_by = NULL WHERE id = ?")->execute([$newSt, $pcId]);
+            $targetSt = in_array($newSt, ['disabled', 'unavailable']) ? 'maintenance' : $newSt;
+            $db->prepare("UPDATE pcs SET status = ?, occupied_by = NULL WHERE id = ?")->execute([$targetSt, $pcId]);
             
-            // If setting to disabled or maintenance, cancel any pending/approved reservations for this PC
-            if (in_array($newSt, ['disabled', 'unavailable', 'maintenance'])) {
+            // If setting to maintenance, cancel any pending/approved reservations for this PC
+            if ($targetSt === 'maintenance') {
                 $pcStmt = $db->prepare("SELECT * FROM pcs WHERE id = ?");
                 $pcStmt->execute([$pcId]);
                 $pc = $pcStmt->fetch();
@@ -33,17 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $resStmt->execute([$pc['lab_room'], $pc['pc_number']]);
                     $reservationsToCancel = $resStmt->fetchAll();
 
-                    $rejectNote = 'PC Under Maintenance (Disabled by Admin)';
+                    $rejectNote = 'PC Under Maintenance';
                     foreach ($reservationsToCancel as $r) {
                         $db->prepare("UPDATE reservations SET status = 'rejected', reject_note = ? WHERE id = ?")->execute([$rejectNote, $r['id']]);
                         $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
                             $r['user_id'],
-                            "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the PC was disabled by the administrator."
+                            "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the PC was placed under maintenance by the administrator."
                         ]);
                     }
                 }
             }
-            $flash = "PC status updated to " . ucfirst($newSt) . ".";
+            $flash = "PC status updated to " . ucfirst($targetSt) . ".";
         }
     }
 
@@ -52,36 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newSt = trim($_POST['new_status'] ?? '');
         if (in_array($lab, $labRooms) && in_array($newSt, ['available', 'unavailable', 'maintenance'])) {
             if ($newSt === 'available') {
-                // Set all disabled, unavailable, and maintenance PCs in this lab to available
+                // Set all maintenance PCs in this lab to available
                 $db->prepare("
                     UPDATE pcs 
                     SET status = 'available' 
                     WHERE lab_room = ? AND status IN ('disabled', 'unavailable', 'maintenance')
                 ")->execute([$lab]);
-                $flash = "All disabled, unavailable, and maintenance PCs in Lab $lab are now Available.";
-            } elseif ($newSt === 'unavailable') {
-                // Set all available PCs in this lab to disabled
-                $db->prepare("
-                    UPDATE pcs 
-                    SET status = 'disabled' 
-                    WHERE lab_room = ? AND status = 'available'
-                ")->execute([$lab]);
-
-                // Cancel reservations for this lab
-                $resStmt = $db->prepare("SELECT * FROM reservations WHERE lab_room = ? AND status IN ('pending', 'approved')");
-                $resStmt->execute([$lab]);
-                $reservationsToCancel = $resStmt->fetchAll();
-
-                $rejectNote = 'Laboratory Closed/Unavailable';
-                foreach ($reservationsToCancel as $r) {
-                    $db->prepare("UPDATE reservations SET status = 'rejected', reject_note = ? WHERE id = ?")->execute([$rejectNote, $r['id']]);
-                    $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
-                        $r['user_id'],
-                        "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the laboratory is temporarily unavailable."
-                    ]);
-                }
-                $flash = "All available PCs in Lab $lab have been set to Unavailable, and all pending/approved reservations for this lab have been rejected.";
-            } elseif ($newSt === 'maintenance') {
+                $flash = "All maintenance PCs in Lab $lab are now Available.";
+            } elseif ($newSt === 'maintenance' || $newSt === 'unavailable') {
                 // Set all available PCs in this lab to maintenance
                 $db->prepare("
                     UPDATE pcs 
@@ -168,17 +148,15 @@ foreach ($labRooms as $lab) {
 /* Stats per lab */
 $labStats = [];
 foreach ($labRooms as $lab) {
-    $avail    = 0; $occupied = 0; $disabled = 0; $maint = 0;
+    $avail    = 0; $occupied = 0; $maint = 0;
     foreach ($allPcs[$lab] as $pc) {
         if ($pc['status'] === 'available') $avail++;
         elseif ($pc['status'] === 'occupied') $occupied++;
-        elseif ($pc['status'] === 'maintenance') $maint++;
-        else $disabled++;
+        else $maint++; // Any disabled, unavailable, or maintenance PCs are counted as maintenance
     }
     $labStats[$lab] = [
         'available' => $avail,
         'occupied' => $occupied,
-        'disabled' => $disabled,
         'maintenance' => $maint
     ];
 }
@@ -314,30 +292,18 @@ foreach ($labRooms as $lab) {
               <div class="pc-stat-chip pc-stat-maint">
                 <i class="bi bi-tools"></i> <?= $labStats[$lab]['maintenance'] ?> Maintenance
               </div>
-              <div class="pc-stat-chip pc-stat-dis">
-                <i class="bi bi-slash-circle"></i> <?= $labStats[$lab]['disabled'] ?> Disabled / Unavailable
-              </div>
             </div>
 
             <!-- Bulk Actions button group -->
             <div class="pc-bulk-actions" style="margin-bottom: 1.25rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 0.6rem 0.85rem; border-radius: 10px;">
               <span style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-right: 0.5rem;"><i class="bi bi-gear-fill"></i> BULK ACTIONS (Lab <?= htmlspecialchars($lab) ?>):</span>
               
-              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all disabled, unavailable, and maintenance PCs in Lab <?= htmlspecialchars($lab) ?> to Available?')">
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all maintenance PCs in Lab <?= htmlspecialchars($lab) ?> to Available?')">
                 <input type="hidden" name="action" value="bulk_status">
                 <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
                 <input type="hidden" name="new_status" value="available">
                 <button type="submit" class="a-btn a-btn-sm a-btn-green">
                   <i class="bi bi-check-circle-fill"></i> Set All Available
-                </button>
-              </form>
-
-              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all currently available PCs in Lab <?= htmlspecialchars($lab) ?> to Unavailable?')">
-                <input type="hidden" name="action" value="bulk_status">
-                <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
-                <input type="hidden" name="new_status" value="unavailable">
-                <button type="submit" class="a-btn a-btn-sm a-btn-red">
-                  <i class="bi bi-slash-circle-fill"></i> Set All Unavailable
                 </button>
               </form>
 
@@ -355,11 +321,10 @@ foreach ($labRooms as $lab) {
               <?php foreach ($allPcs[$lab] as $pc):
                 $num = str_pad($pc['pc_number'], 2, '0', STR_PAD_LEFT);
                 $cls = $pc['status'] === 'available' ? 'pc-avail'
-                     : ($pc['status'] === 'occupied' ? 'pc-occ' 
-                     : ($pc['status'] === 'maintenance' ? 'pc-maint' : 'pc-dis'));
+                     : ($pc['status'] === 'occupied' ? 'pc-occ' : 'pc-maint');
               ?>
                 <div class="pc-card <?= $cls ?>">
-                  <?php if ($pc['status'] === 'maintenance'): ?>
+                  <?php if ($pc['status'] === 'maintenance' || $pc['status'] === 'disabled' || $pc['status'] === 'unavailable'): ?>
                     <i class="bi bi-tools pc-card-icon" style="color: #d97706;" title="Under Maintenance"></i>
                   <?php else: ?>
                     <i class="bi bi-display pc-card-icon"></i>
@@ -370,24 +335,14 @@ foreach ($labRooms as $lab) {
                   <?php endif; ?>
                   <div class="pc-card-actions">
                     <?php if ($pc['status'] === 'available'): ?>
-                      <div style="display: flex; gap: 3px;">
-                        <form method="POST" style="display:inline;">
-                          <input type="hidden" name="action" value="toggle_pc">
-                          <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
-                          <input type="hidden" name="new_status" value="disabled">
-                          <button type="submit" class="pc-act-btn pc-act-toggle" title="Disable" style="background: rgba(220,38,38,0.08); color: #dc2626;">
-                            <i class="bi bi-slash-circle"></i> Disable
-                          </button>
-                        </form>
-                        <form method="POST" style="display:inline;">
-                          <input type="hidden" name="action" value="toggle_pc">
-                          <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
-                          <input type="hidden" name="new_status" value="maintenance">
-                          <button type="submit" class="pc-act-btn pc-act-toggle" title="Maintenance" style="background: rgba(217,119,6,0.08); color: #d97706;">
-                            <i class="bi bi-tools"></i> Maint
-                          </button>
-                        </form>
-                      </div>
+                      <form method="POST" style="display:inline;">
+                        <input type="hidden" name="action" value="toggle_pc">
+                        <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
+                        <input type="hidden" name="new_status" value="maintenance">
+                        <button type="submit" class="pc-act-btn pc-act-toggle" title="Maintenance" style="background: rgba(217,119,6,0.08); color: #d97706;">
+                          <i class="bi bi-tools"></i> Maintenance
+                        </button>
+                      </form>
                     <?php elseif (in_array($pc['status'], ['disabled', 'unavailable', 'maintenance'])): ?>
                       <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="toggle_pc">
@@ -405,7 +360,6 @@ foreach ($labRooms as $lab) {
                           <i class="bi bi-door-open"></i> Release
                         </button>
                       </form>
-                    <!-- No action needed for reserved status since reservations are virtual and do not block the physical state -->
                     <?php endif; ?>
                   </div>
                 </div>

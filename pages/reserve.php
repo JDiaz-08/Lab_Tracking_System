@@ -282,7 +282,7 @@ echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
 }
 .pc-legend-dot.avail { background: #16a34a; }
 .pc-legend-dot.occupied { background: #dc2626; }
-.pc-legend-dot.disabled { background: #94a3b8; }
+.pc-legend-dot.maintenance { background: #d97706; }
 .pc-legend-dot.reserved { background: #d97706; }
 .pc-legend-dot.selected { background: #2563EB; }
 
@@ -505,7 +505,7 @@ html.dark .res-log-reason { background: rgba(239,68,68,0.10); border-color: rgba
               <div class="pc-legend">
                 <div class="pc-legend-item"><div class="pc-legend-dot avail"></div> Available</div>
                 <div class="pc-legend-item"><div class="pc-legend-dot occupied"></div> Occupied</div>
-                <div class="pc-legend-item"><div class="pc-legend-dot disabled"></div> Disabled</div>
+                <div class="pc-legend-item"><div class="pc-legend-dot maintenance"></div> Maintenance</div>
                 <div class="pc-legend-item"><div class="pc-legend-dot selected"></div> Selected</div>
               </div>
               <div class="pc-selected-label" id="pcSelectedLabel">
@@ -650,11 +650,16 @@ labSelect.addEventListener('change', function() {
         const num = String(pc.pc_number).padStart(2, '0');
         let cls = '';
         let disabled = false;
+        let iconMarkup = '<i class="bi bi-display pc-cell-icon"></i>';
         if (pc.status === 'occupied') { cls = 'pc-occupied'; disabled = true; }
         else if (pc.status === 'reserved') { cls = 'pc-occupied'; disabled = true; }
-        else if (pc.status === 'disabled') { cls = 'pc-disabled'; disabled = true; }
+        else if (pc.status === 'disabled' || pc.status === 'unavailable' || pc.status === 'maintenance') {
+          cls = 'pc-disabled';
+          disabled = true;
+          iconMarkup = '<i class="bi bi-tools pc-cell-icon" style="color: #d97706;" title="Under Maintenance"></i>';
+        }
         grid += `<div class="pc-cell ${cls}" data-pc="${pc.pc_number}" ${disabled ? '' : 'onclick="selectPc('+pc.pc_number+')"'}>
-                   <i class="bi bi-display pc-cell-icon"></i>
+                   ${iconMarkup}
                    <span class="pc-cell-num">PC-${num}</span>
                  </div>`;
       });
