@@ -215,7 +215,26 @@ function exportTableToCSV(tableId, filename = 'export.csv') {
   }
 }
 
-function exportTableToPDF(tableId, title = 'Report', filename = 'report.pdf') {
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image: ' + src));
+    img.src = src;
+  });
+}
+
+function getAssetsPath() {
+  const path = window.location.pathname;
+  if (path.includes('/pages/admin/')) {
+    return '../../assets/images/';
+  } else if (path.includes('/pages/')) {
+    return '../assets/images/';
+  }
+  return 'assets/images/';
+}
+
+async function exportTableToPDF(tableId, title = 'Report', filename = 'report.pdf') {
   try {
     const table = document.getElementById(tableId);
     if (!table) throw new Error('Table element with ID "' + tableId + '" not found.');
@@ -269,22 +288,73 @@ function exportTableToPDF(tableId, title = 'Report', filename = 'report.pdf') {
       bodyData.push(rowData);
     });
 
-    // Header Title
+    // --- Premium Header with Logos (Centered Layout) ---
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const centerX = pageWidth / 2;
+    const assetsDir = getAssetsPath();
+
+    // Asynchronously load logos
+    let ucLogoImg = null;
+    let ccsLogoImg = null;
+
+    try {
+      ucLogoImg = await loadImage(assetsDir + 'uc-logo-white.png');
+    } catch (e) {
+      console.warn("Could not load UC logo, skipping in PDF:", e);
+    }
+
+    try {
+      ccsLogoImg = await loadImage(assetsDir + 'ccs-logo.png');
+    } catch (e) {
+      console.warn("Could not load CCS logo, skipping in PDF:", e);
+    }
+
+    // Draw UC Logo (Left-aligned)
+    if (ucLogoImg) {
+      const ucHeight = 35; // Target height in pt
+      const ucWidth = ucHeight * (ucLogoImg.width / ucLogoImg.height);
+      // Position UC logo at x=40, y=22
+      doc.addImage(ucLogoImg, 'PNG', 40, 22, ucWidth, ucHeight);
+    }
+
+    // Draw CCS Logo (Right-aligned)
+    if (ccsLogoImg) {
+      const ccsHeight = 35; // Target height in pt
+      const ccsWidth = ccsHeight * (ccsLogoImg.width / ccsLogoImg.height);
+      // Position CCS logo aligned to the right margin
+      doc.addImage(ccsLogoImg, 'PNG', pageWidth - 40 - ccsWidth, 22, ccsWidth, ccsHeight);
+    }
+
+    // Title Line 1: UCMAIN
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
+    doc.setFontSize(13);
     doc.setTextColor(26, 58, 107); // --a-navy (#1a3a6b)
-    doc.text(title, 40, 45);
+    doc.text("UCMAIN", centerX, 32, { align: 'center' });
 
-    // Subtitle / Date
+    // Title Line 2: Subtitle / Report Type
+    const displayTitle = title.includes('—') ? title.split('—')[1].trim() : title;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.text(displayTitle, centerX, 46, { align: 'center' });
+
+    // Title Line 3: Generated date/time matching YYYY-MM-DD HH:MM:SS format
+    const now = new Date();
+    const formattedDate = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0') + ' ' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ':' +
+      String(now.getSeconds()).padStart(2, '0');
+
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139); // Slate-500
-    doc.text("Generated on: " + new Date().toLocaleString(), 40, 60);
+    doc.text("Generated: " + formattedDate, centerX, 58, { align: 'center' });
 
-    // Premium border under title block
-    doc.setDrawColor(226, 232, 240); // --a-gray200
-    doc.setLineWidth(1);
-    doc.line(40, 70, 555, 70);
+    // Solid blue horizontal bar under the header block
+    doc.setFillColor(26, 58, 107); // --a-navy (#1a3a6b)
+    doc.rect(40, 68, pageWidth - 80, 4, 'F');
 
     // Generate Table using jsPDF-AutoTable
     doc.autoTable({

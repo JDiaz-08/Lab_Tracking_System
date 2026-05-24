@@ -17,9 +17,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'toggle_pc') {
         $pcId   = (int)($_POST['pc_id'] ?? 0);
         $newSt  = trim($_POST['new_status'] ?? '');
-        if ($pcId > 0 && in_array($newSt, ['available','disabled'])) {
+        if ($pcId > 0 && in_array($newSt, ['available', 'disabled', 'unavailable', 'maintenance'])) {
             $db->prepare("UPDATE pcs SET status = ?, occupied_by = NULL WHERE id = ?")->execute([$newSt, $pcId]);
             $flash = "PC status updated to " . ucfirst($newSt) . ".";
+        }
+    }
+
+    if ($action === 'bulk_status') {
+        $lab = trim($_POST['lab_room'] ?? '');
+        $newSt = trim($_POST['new_status'] ?? '');
+        if (in_array($lab, $labRooms) && in_array($newSt, ['available', 'unavailable', 'maintenance'])) {
+            if ($newSt === 'available') {
+                // Set all disabled, unavailable, and maintenance PCs in this lab to available
+                $db->prepare("
+                    UPDATE pcs 
+                    SET status = 'available' 
+                    WHERE lab_room = ? AND status IN ('disabled', 'unavailable', 'maintenance')
+                ")->execute([$lab]);
+                $flash = "All disabled, unavailable, and maintenance PCs in Lab $lab are now Available.";
+            } elseif ($newSt === 'unavailable') {
+                // Set all available PCs in this lab to disabled
+                $db->prepare("
+                    UPDATE pcs 
+                    SET status = 'disabled' 
+                    WHERE lab_room = ? AND status = 'available'
+                ")->execute([$lab]);
+                $flash = "All available PCs in Lab $lab have been set to Unavailable.";
+            } elseif ($newSt === 'maintenance') {
+                // Set all available PCs in this lab to maintenance
+                $db->prepare("
+                    UPDATE pcs 
+                    SET status = 'maintenance' 
+                    WHERE lab_room = ? AND status = 'available'
+                ")->execute([$lab]);
+                $flash = "All available PCs in Lab $lab have been set to Maintenance.";
+            }
         }
     }
 
@@ -116,14 +148,21 @@ foreach ($labRooms as $lab) {
 /* Stats per lab */
 $labStats = [];
 foreach ($labRooms as $lab) {
-    $avail    = 0; $occupied = 0; $disabled = 0; $reserved = 0;
+    $avail    = 0; $occupied = 0; $disabled = 0; $reserved = 0; $maint = 0;
     foreach ($allPcs[$lab] as $pc) {
         if ($pc['status'] === 'available') $avail++;
         elseif ($pc['status'] === 'occupied') $occupied++;
         elseif ($pc['status'] === 'reserved') $reserved++;
+        elseif ($pc['status'] === 'maintenance') $maint++;
         else $disabled++;
     }
-    $labStats[$lab] = ['available' => $avail, 'occupied' => $occupied, 'disabled' => $disabled, 'reserved' => $reserved];
+    $labStats[$lab] = [
+        'available' => $avail,
+        'occupied' => $occupied,
+        'disabled' => $disabled,
+        'reserved' => $reserved,
+        'maintenance' => $maint
+    ];
 }
 ?>
 <!DOCTYPE html>
@@ -165,6 +204,7 @@ foreach ($labRooms as $lab) {
     .pc-stat-avail   { background: rgba(22,163,74,0.06); border-color: rgba(22,163,74,0.18); color: #15803d; }
     .pc-stat-occ     { background: rgba(220,38,38,0.06); border-color: rgba(220,38,38,0.18); color: #dc2626; }
     .pc-stat-res     { background: rgba(217,119,6,0.06); border-color: rgba(217,119,6,0.18); color: #d97706; }
+    .pc-stat-maint   { background: rgba(217,119,6,0.06); border-color: rgba(217,119,6,0.18); color: #d97706; }
     .pc-stat-dis     { background: rgba(100,116,139,0.06); border-color: rgba(100,116,139,0.18); color: #64748b; }
     .pc-stat-chip i  { font-size: 0.68rem; }
 
@@ -185,11 +225,13 @@ foreach ($labRooms as $lab) {
     .pc-card.pc-avail  { border-color: rgba(22,163,74,0.25); }
     .pc-card.pc-occ    { border-color: rgba(220,38,38,0.25); background: rgba(220,38,38,0.02); }
     .pc-card.pc-res    { border-color: rgba(217,119,6,0.25); background: rgba(217,119,6,0.02); }
+    .pc-card.pc-maint  { border-color: rgba(217,119,6,0.25); background: rgba(217,119,6,0.02); }
     .pc-card.pc-dis    { border-color: #e2e8f0; background: #f8fafc; opacity: 0.6; }
     .pc-card-icon { font-size: 1.2rem; margin-bottom: 3px; }
     .pc-avail .pc-card-icon { color: #16a34a; }
     .pc-occ   .pc-card-icon { color: #dc2626; }
     .pc-res   .pc-card-icon { color: #d97706; }
+    .pc-maint .pc-card-icon { color: #d97706; }
     .pc-dis   .pc-card-icon { color: #94a3b8; }
     .pc-card-num { font-size: 0.62rem; font-weight: 700; color: #64748b; margin-bottom: 3px; }
     .pc-card-stu { font-size: 0.55rem; color: #94a3b8; line-height: 1.3; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -257,34 +299,85 @@ foreach ($labRooms as $lab) {
               <div class="pc-stat-chip pc-stat-res">
                 <i class="bi bi-bookmark-fill"></i> <?= $labStats[$lab]['reserved'] ?> Reserved
               </div>
-              <div class="pc-stat-chip pc-stat-dis">
-                <i class="bi bi-slash-circle"></i> <?= $labStats[$lab]['disabled'] ?> Disabled
+              <div class="pc-stat-chip pc-stat-maint">
+                <i class="bi bi-tools"></i> <?= $labStats[$lab]['maintenance'] ?> Maintenance
               </div>
+              <div class="pc-stat-chip pc-stat-dis">
+                <i class="bi bi-slash-circle"></i> <?= $labStats[$lab]['disabled'] ?> Disabled / Unavailable
+              </div>
+            </div>
+
+            <!-- Bulk Actions button group -->
+            <div class="pc-bulk-actions" style="margin-bottom: 1.25rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 0.6rem 0.85rem; border-radius: 10px;">
+              <span style="font-size: 0.72rem; font-weight: 700; color: #475569; margin-right: 0.5rem;"><i class="bi bi-gear-fill"></i> BULK ACTIONS (Lab <?= htmlspecialchars($lab) ?>):</span>
+              
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all disabled, unavailable, and maintenance PCs in Lab <?= htmlspecialchars($lab) ?> to Available?')">
+                <input type="hidden" name="action" value="bulk_status">
+                <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
+                <input type="hidden" name="new_status" value="available">
+                <button type="submit" class="a-btn a-btn-sm a-btn-green">
+                  <i class="bi bi-check-circle-fill"></i> Set All Available
+                </button>
+              </form>
+
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all currently available PCs in Lab <?= htmlspecialchars($lab) ?> to Unavailable?')">
+                <input type="hidden" name="action" value="bulk_status">
+                <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
+                <input type="hidden" name="new_status" value="unavailable">
+                <button type="submit" class="a-btn a-btn-sm a-btn-red">
+                  <i class="bi bi-slash-circle-fill"></i> Set All Unavailable
+                </button>
+              </form>
+
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all currently available PCs in Lab <?= htmlspecialchars($lab) ?> to Maintenance?')">
+                <input type="hidden" name="action" value="bulk_status">
+                <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
+                <input type="hidden" name="new_status" value="maintenance">
+                <button type="submit" class="a-btn a-btn-sm a-btn-yellow">
+                  <i class="bi bi-tools"></i> Set All Maintenance
+                </button>
+              </form>
             </div>
 
             <div class="pc-grid-admin">
               <?php foreach ($allPcs[$lab] as $pc):
                 $num = str_pad($pc['pc_number'], 2, '0', STR_PAD_LEFT);
                 $cls = $pc['status'] === 'available' ? 'pc-avail'
-                     : ($pc['status'] === 'occupied' ? 'pc-occ' : ($pc['status'] === 'reserved' ? 'pc-res' : 'pc-dis'));
+                     : ($pc['status'] === 'occupied' ? 'pc-occ' 
+                     : ($pc['status'] === 'reserved' ? 'pc-res' 
+                     : ($pc['status'] === 'maintenance' ? 'pc-maint' : 'pc-dis')));
               ?>
                 <div class="pc-card <?= $cls ?>">
-                  <i class="bi bi-display pc-card-icon"></i>
+                  <?php if ($pc['status'] === 'maintenance'): ?>
+                    <i class="bi bi-tools pc-card-icon" style="color: #d97706;" title="Under Maintenance"></i>
+                  <?php else: ?>
+                    <i class="bi bi-display pc-card-icon"></i>
+                  <?php endif; ?>
                   <div class="pc-card-num">PC-<?= $num ?></div>
                   <?php if (($pc['status'] === 'occupied' || $pc['status'] === 'reserved') && $pc['student_name']): ?>
                     <div class="pc-card-stu" title="<?= htmlspecialchars($pc['student_name']) ?>"><?= htmlspecialchars($pc['student_name']) ?></div>
                   <?php endif; ?>
                   <div class="pc-card-actions">
                     <?php if ($pc['status'] === 'available'): ?>
-                      <form method="POST" style="display:inline;">
-                        <input type="hidden" name="action" value="toggle_pc">
-                        <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
-                        <input type="hidden" name="new_status" value="disabled">
-                        <button type="submit" class="pc-act-btn pc-act-toggle" title="Disable">
-                          <i class="bi bi-slash-circle"></i> Disable
-                        </button>
-                      </form>
-                    <?php elseif ($pc['status'] === 'disabled'): ?>
+                      <div style="display: flex; gap: 3px;">
+                        <form method="POST" style="display:inline;">
+                          <input type="hidden" name="action" value="toggle_pc">
+                          <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
+                          <input type="hidden" name="new_status" value="disabled">
+                          <button type="submit" class="pc-act-btn pc-act-toggle" title="Disable" style="background: rgba(220,38,38,0.08); color: #dc2626;">
+                            <i class="bi bi-slash-circle"></i> Disable
+                          </button>
+                        </form>
+                        <form method="POST" style="display:inline;">
+                          <input type="hidden" name="action" value="toggle_pc">
+                          <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
+                          <input type="hidden" name="new_status" value="maintenance">
+                          <button type="submit" class="pc-act-btn pc-act-toggle" title="Maintenance" style="background: rgba(217,119,6,0.08); color: #d97706;">
+                            <i class="bi bi-tools"></i> Maint
+                          </button>
+                        </form>
+                      </div>
+                    <?php elseif (in_array($pc['status'], ['disabled', 'unavailable', 'maintenance'])): ?>
                       <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="toggle_pc">
                         <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
