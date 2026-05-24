@@ -34,9 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rejectNote = trim($_POST['reject_note'] ?? '');
         $db->prepare("UPDATE reservations SET status='rejected', reject_note=? WHERE id=?")->execute([$rejectNote ?: null, $rid]);
         if ($res) {
-            if ($res['pc_number']) {
-                $db->prepare("UPDATE pcs SET status = 'available', occupied_by = NULL WHERE lab_room = ? AND pc_number = ? AND status = 'reserved'")->execute([$res['lab_room'], $res['pc_number']]);
-            }
             $noteMsg = $rejectNote ? " Reason: {$rejectNote}" : '';
             $db->prepare("INSERT INTO notifications (user_id,message) VALUES (?,?)")
                ->execute([$res['user_id'],
@@ -47,12 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = 'Reservation rejected.';
     }
     elseif ($action === 'delete') {
-        $res = $db->prepare("SELECT * FROM reservations WHERE id=?");
-        $res->execute([$rid]);
-        $res = $res->fetch();
-        if ($res && $res['pc_number'] && $res['status'] !== 'rejected' && $res['status'] !== 'done') {
-            $db->prepare("UPDATE pcs SET status = 'available', occupied_by = NULL WHERE lab_room = ? AND pc_number = ? AND status = 'reserved'")->execute([$res['lab_room'], $res['pc_number']]);
-        }
         $db->prepare("DELETE FROM reservations WHERE id=?")->execute([$rid]);
         $flash = 'Reservation deleted.';
     }

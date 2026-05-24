@@ -36,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reser
         $errors[] = 'Please select a PC from the grid.';
     } else {
         $db->prepare("INSERT INTO reservations (user_id, lab_room, date, time_slot, purpose, pc_number) VALUES (?, ?, ?, ?, ?, ?)")->execute([$uid, $labRoom, $date, $timeIn, $purpose, $pcNumber]);
-        $db->prepare("UPDATE pcs SET status = 'reserved', occupied_by = ? WHERE lab_room = ? AND pc_number = ?")->execute([$uid, $labRoom, $pcNumber]);
         $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([$uid, "Reservation for Lab {$labRoom} (PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT).") on " . date('F j, Y', strtotime($date)) . " at {$timeIn} submitted."]);
         $resSuccess = "Reservation submitted for Lab {$labRoom}, PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT)." on " . date('F j, Y', strtotime($date)) . ". You will be notified once approved.";
     }
@@ -53,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($res && ($res['disabled_by_student'] ?? 0) == 0) {
             $db->prepare("UPDATE reservations SET disabled_by_student = 1 WHERE id = ?")->execute([$resId]);
-            $db->prepare("UPDATE pcs SET status = 'available', occupied_by = NULL WHERE lab_room = ? AND pc_number = ? AND occupied_by = ?")->execute([$res['lab_room'], $res['pc_number'], $uid]);
             $resSuccess = "Reservation disabled successfully. Admin will not see this reservation while disabled.";
         } else {
             $errors[] = "Reservation cannot be disabled.";
@@ -73,7 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if ($pc && $pc['status'] === 'available') {
                 $db->prepare("UPDATE reservations SET disabled_by_student = 0 WHERE id = ?")->execute([$resId]);
-                $db->prepare("UPDATE pcs SET status = 'reserved', occupied_by = ? WHERE lab_room = ? AND pc_number = ?")->execute([$uid, $res['lab_room'], $res['pc_number']]);
                 $resSuccess = "Reservation enabled successfully and is now visible to the admin.";
             } else {
                 $errors[] = "The PC is no longer available. Please book a new PC.";

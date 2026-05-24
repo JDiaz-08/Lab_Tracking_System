@@ -19,6 +19,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newSt  = trim($_POST['new_status'] ?? '');
         if ($pcId > 0 && in_array($newSt, ['available', 'disabled', 'unavailable', 'maintenance'])) {
             $db->prepare("UPDATE pcs SET status = ?, occupied_by = NULL WHERE id = ?")->execute([$newSt, $pcId]);
+            
+            // If setting to disabled or maintenance, cancel any pending/approved reservations for this PC
+            if (in_array($newSt, ['disabled', 'unavailable', 'maintenance'])) {
+                $pcStmt = $db->prepare("SELECT * FROM pcs WHERE id = ?");
+                $pcStmt->execute([$pcId]);
+                $pc = $pcStmt->fetch();
+                if ($pc) {
+                    $resStmt = $db->prepare("SELECT * FROM reservations WHERE lab_room = ? AND pc_number = ? AND status IN ('pending', 'approved')");
+                    $resStmt->execute([$pc['lab_room'], $pc['pc_number']]);
+                    $reservationsToCancel = $resStmt->fetchAll();
+
+                    $rejectNote = 'PC Under Maintenance (Disabled by Admin)';
+                    foreach ($reservationsToCancel as $r) {
+                        $db->prepare("UPDATE reservations SET status = 'rejected', reject_note = ? WHERE id = ?")->execute([$rejectNote, $r['id']]);
+                        $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
+                            $r['user_id'],
+                            "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the PC was disabled by the administrator."
+                        ]);
+                    }
+                }
+            }
             $flash = "PC status updated to " . ucfirst($newSt) . ".";
         }
     }
@@ -42,7 +63,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SET status = 'disabled' 
                     WHERE lab_room = ? AND status = 'available'
                 ")->execute([$lab]);
-                $flash = "All available PCs in Lab $lab have been set to Unavailable.";
+
+                // Cancel reservations for this lab
+                $resStmt = $db->prepare("SELECT * FROM reservations WHERE lab_room = ? AND status IN ('pending', 'approved')");
+                $resStmt->execute([$lab]);
+                $reservationsToCancel = $resStmt->fetchAll();
+
+                $rejectNote = 'Laboratory Closed/Unavailable';
+                foreach ($reservationsToCancel as $r) {
+                    $db->prepare("UPDATE reservations SET status = 'rejected', reject_note = ? WHERE id = ?")->execute([$rejectNote, $r['id']]);
+                    $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
+                        $r['user_id'],
+                        "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the laboratory is temporarily unavailable."
+                    ]);
+                }
+                $flash = "All available PCs in Lab $lab have been set to Unavailable, and all pending/approved reservations for this lab have been rejected.";
             } elseif ($newSt === 'maintenance') {
                 // Set all available PCs in this lab to maintenance
                 $db->prepare("
@@ -50,7 +85,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SET status = 'maintenance' 
                     WHERE lab_room = ? AND status = 'available'
                 ")->execute([$lab]);
-                $flash = "All available PCs in Lab $lab have been set to Maintenance.";
+
+                // Cancel reservations for this lab
+                $resStmt = $db->prepare("SELECT * FROM reservations WHERE lab_room = ? AND status IN ('pending', 'approved')");
+                $resStmt->execute([$lab]);
+                $reservationsToCancel = $resStmt->fetchAll();
+
+                $rejectNote = 'Laboratory Under Maintenance';
+                foreach ($reservationsToCancel as $r) {
+                    $db->prepare("UPDATE reservations SET status = 'rejected', reject_note = ? WHERE id = ?")->execute([$rejectNote, $r['id']]);
+                    $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
+                        $r['user_id'],
+                        "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the laboratory is undergoing maintenance."
+                    ]);
+                }
+                $flash = "All available PCs in Lab $lab have been set to Maintenance, and all pending/approved reservations for this lab have been rejected.";
             }
         }
     }
@@ -85,38 +134,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flash = "Session ended and PC released.";
             } else {
                 $flash = "PC not found or not occupied.";
-                $flashType = 'error';
-            }
-        }
-    }
-
-    if ($action === 'disable_reserved') {
-        $pcId = (int)($_POST['pc_id'] ?? 0);
-        if ($pcId > 0) {
-            $pcInfo = $db->prepare("SELECT * FROM pcs WHERE id = ?");
-            $pcInfo->execute([$pcId]);
-            $pc = $pcInfo->fetch();
-
-            if ($pc && $pc['status'] === 'reserved') {
-                // Find active/pending/approved reservations for this PC
-                $resStmt = $db->prepare("SELECT * FROM reservations WHERE lab_room = ? AND pc_number = ? AND status IN ('pending', 'approved')");
-                $resStmt->execute([$pc['lab_room'], $pc['pc_number']]);
-                $reservationsToCancel = $resStmt->fetchAll();
-
-                $rejectNote = 'PC Under Maintenance (Disabled by Admin)';
-                foreach ($reservationsToCancel as $r) {
-                    $db->prepare("UPDATE reservations SET status = 'rejected', reject_note = ? WHERE id = ?")->execute([$rejectNote, $r['id']]);
-                    $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
-                        $r['user_id'],
-                        "❌ Your reservation for Lab {$r['lab_room']} PC-{$r['pc_number']} has been rejected because the PC was disabled by the administrator."
-                    ]);
-                }
-
-                // Set PC status to disabled
-                $db->prepare("UPDATE pcs SET status = 'disabled', occupied_by = NULL WHERE id = ?")->execute([$pcId]);
-                $flash = "PC-" . str_pad($pc['pc_number'], 2, '0', STR_PAD_LEFT) . " disabled and associated reservations canceled.";
-            } else {
-                $flash = "PC not found or not reserved.";
                 $flashType = 'error';
             }
         }
@@ -394,14 +411,7 @@ foreach ($labRooms as $lab) {
                           <i class="bi bi-door-open"></i> Release
                         </button>
                       </form>
-                    <?php elseif ($pc['status'] === 'reserved'): ?>
-                      <form method="POST" style="display:inline;" onsubmit="return confirm('Disable PC-<?= $num ?> and cancel the active reservation?')">
-                        <input type="hidden" name="action" value="disable_reserved">
-                        <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
-                        <button type="submit" class="pc-act-btn pc-act-release" title="Disable">
-                          <i class="bi bi-slash-circle"></i> Disable
-                        </button>
-                      </form>
+                    <!-- No action needed for reserved status since reservations are virtual and do not block the physical state -->
                     <?php endif; ?>
                   </div>
                 </div>
