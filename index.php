@@ -317,17 +317,7 @@ require_once __DIR__ . '/includes/navbar.php';
   </div>
 </section>
 
-<!-- STATS -->
-<section class="sim-stats-banner">
-  <div class="sim-container">
-    <div class="sim-stats-grid">
-      <div class="sim-stat-item reveal"><div class="sim-stat-n counter" data-target="1200" data-suffix="+">0</div><div class="sim-stat-l">Registered Students</div></div>
-      <div class="sim-stat-item reveal"><div class="sim-stat-n counter" data-target="6">0</div><div class="sim-stat-l">Laboratory Rooms</div></div>
-      <div class="sim-stat-item reveal"><div class="sim-stat-n counter" data-target="180" data-suffix="+">0</div><div class="sim-stat-l">Workstations</div></div>
-      <div class="sim-stat-item reveal"><div class="sim-stat-n counter" data-target="98" data-suffix="%">0</div><div class="sim-stat-l">System Uptime</div></div>
-    </div>
-  </div>
-</section>
+
 
 <!-- LEADERBOARD -->
 <?php if (!empty($topStudents)): ?>
