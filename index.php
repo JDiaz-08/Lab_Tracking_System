@@ -26,7 +26,7 @@ $topStudents = $db->query("
     LEFT JOIN sit_in_logs s ON s.user_id = u.id AND s.logout_time IS NOT NULL
     GROUP BY u.id
     ORDER BY total_sessions DESC, u.points DESC
-    LIMIT 6
+    LIMIT 3
 ")->fetchAll();
 
 require_once __DIR__ . '/includes/header.php';
@@ -231,6 +231,187 @@ require_once __DIR__ . '/includes/navbar.php';
   .sim-steps-grid { grid-template-columns: 1fr; }
   .sim-test-grid  { grid-template-columns: 1fr; }
 }
+
+/* --- OVERRIDES FOR LEADERBOARD REDESIGN --- */
+@media (min-width: 901px) {
+  .sim-lb-grid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+  }
+}
+.sim-lb-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+@media (min-width: 901px) {
+  .sim-lb-card {
+    flex: 1;
+    margin: 0;
+  }
+}
+.sim-lb-avatar-wrapper {
+  position: relative;
+  margin-bottom: 1rem;
+}
+.sim-lb-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--mid));
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border: 3px solid #fff;
+}
+.sim-lb-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sim-lb-rank-icon {
+  position: absolute;
+  bottom: -4px;
+  right: -8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: 2px solid #fff;
+}
+.sim-lb-rank-icon.gold { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; }
+.sim-lb-rank-icon.silver { background: linear-gradient(135deg, #cbd5e1, #94a3b8); color: #fff; }
+.sim-lb-rank-icon.bronze { background: linear-gradient(135deg, #fcd34d, #d97706); color: #fff; }
+
+.sim-lb-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 0.25rem;
+}
+.sim-lb-course {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
+}
+.sim-lb-pts-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #311b5e; /* Deep purple like the image */
+  color: #fff;
+  padding: 0.4rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.sim-lb-pts-badge i {
+  color: #fbbf24;
+}
+
+@media (min-width: 901px) {
+  .sim-lb-podium-1 {
+    order: 2;
+    transform: scale(1.15);
+    z-index: 10;
+    border-color: #fbd38d;
+    box-shadow: 0 15px 35px rgba(245, 158, 11, 0.15);
+    padding: 3.5rem 1.5rem; /* Make it taller */
+  }
+  .sim-lb-podium-1 .sim-lb-avatar {
+    width: 96px;
+    height: 96px;
+    font-size: 1.75rem;
+    border-color: #fbd38d;
+    border-width: 4px;
+  }
+  .sim-lb-podium-1 .sim-lb-rank-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+    bottom: 0;
+    right: -4px;
+  }
+  .sim-lb-podium-2 { order: 1; }
+  .sim-lb-podium-3 { order: 3; }
+}
+
+html.dark .sim-lb-card {
+  background: #162a45;
+  border-color: #1f375a;
+}
+html.dark .sim-lb-avatar { border-color: #162a45; }
+html.dark .sim-lb-rank-icon { border-color: #162a45; }
+html.dark .sim-lb-podium-1 .sim-lb-avatar { border-color: #fbd38d; }
+html.dark .sim-lb-name { color: #fff; }
+
+/* --- TESTIMONIAL SLIDESHOW --- */
+.sim-test-slideshow {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem 0;
+  width: 100%;
+}
+.sim-test-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.sim-test-slide {
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 0 10px;
+}
+@media (min-width: 768px) {
+  .sim-test-slide {
+    min-width: 50%;
+  }
+}
+@media (min-width: 1024px) {
+  .sim-test-slide {
+    min-width: 33.3333%;
+  }
+}
+.sim-test-nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 2rem;
+}
+.sim-test-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.sim-test-dot.active {
+  background: var(--navy);
+  transform: scale(1.2);
+}
+html.dark .sim-test-dot { background: #1f375a; }
+html.dark .sim-test-dot.active { background: #3b82f6; }
 </style>
 
 <!-- HERO -->
@@ -310,24 +491,27 @@ require_once __DIR__ . '/includes/navbar.php';
         $rank = $i + 1;
         $rankClass = $rank === 1 ? 'gold' : ($rank === 2 ? 'silver' : ($rank === 3 ? 'bronze' : 'other'));
         $rankLabel = $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : ($rank === 3 ? '🥉' : $rank));
+        $podiumClass = $rank === 1 ? 'sim-lb-podium-1' : ($rank === 2 ? 'sim-lb-podium-2' : 'sim-lb-podium-3');
         $sInitials = strtoupper(substr($s['first_name'],0,1) . substr($s['last_name'],0,1));
-        $pointsLeft = 8 - ((int)$s['points'] % 8);
       ?>
-      <div class="sim-lb-card reveal">
-        <div class="sim-lb-rank <?= $rankClass ?>"><?= $rankLabel ?></div>
-        <div class="sim-lb-avatar">
-          <?php if (!empty($s['profile_picture'])): ?>
-            <img src="<?= htmlspecialchars($s['profile_picture']) ?>" alt="">
-          <?php else: ?>
-            <?= $sInitials ?>
-          <?php endif; ?>
+      <div class="sim-lb-card reveal <?= $podiumClass ?>">
+        
+        <div class="sim-lb-avatar-wrapper">
+          <div class="sim-lb-avatar">
+            <?php if (!empty($s['profile_picture'])): ?>
+              <img src="<?= htmlspecialchars($s['profile_picture']) ?>" alt="">
+            <?php else: ?>
+              <?= $sInitials ?>
+            <?php endif; ?>
+          </div>
+          <div class="sim-lb-rank-icon <?= $rankClass ?>"><?= $rankLabel ?></div>
         </div>
-        <div class="sim-lb-info">
-          <div class="sim-lb-name"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></div>
-          <div class="sim-lb-course"><?= htmlspecialchars($s['course'] ?? 'CCS') ?></div>
-        </div>
-        <div class="sim-lb-badge">
-          <div class="sim-lb-pts"><?= (int)$s['points'] ?> PTS</div>
+        
+        <div class="sim-lb-name"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></div>
+        <div class="sim-lb-course"><?= htmlspecialchars($s['course'] ?? 'CCS') ?></div>
+        
+        <div class="sim-lb-pts-badge">
+          <i class="bi bi-star-fill"></i> <?= (int)$s['points'] ?> points
         </div>
       </div>
       <?php endforeach; ?>
@@ -345,30 +529,35 @@ require_once __DIR__ . '/includes/navbar.php';
       <h2 class="sim-section-h2">What Students Say</h2>
       <p class="sim-section-desc">Hear from students who use our lab facilities every day.</p>
     </div>
-    <div class="sim-test-grid">
-      <?php foreach ($featuredTestimonials as $ft):
-        $initials = strtoupper(substr($ft['full_name'],0,1) . substr(explode(' ',$ft['full_name'])[1] ?? '',0,1));
-      ?>
-        <div class="sim-test-card reveal">
-          <div class="sim-test-stars">
-            <?= str_repeat('★', (int)$ft['rating']) ?><?php if ((int)$ft['rating'] < 5): ?><span class="off"><?= str_repeat('★', 5 - (int)$ft['rating']) ?></span><?php endif; ?>
-          </div>
-          <p class="sim-test-msg"><?= htmlspecialchars(mb_substr($ft['message'], 0, 180)) ?><?= strlen($ft['message']) > 180 ? '…' : '' ?></p>
-          <div class="sim-test-author">
-            <div class="sim-test-avatar">
-              <?php if (!empty($ft['profile_picture'])): ?>
-                <img src="<?= htmlspecialchars($ft['profile_picture']) ?>" alt="" />
-              <?php else: ?>
-                <?= $initials ?>
-              <?php endif; ?>
+    <div class="sim-test-slideshow" id="testimonialSlideshow">
+      <div class="sim-test-track" id="testimonialTrack">
+        <?php foreach ($featuredTestimonials as $ft):
+          $initials = strtoupper(substr($ft['full_name'],0,1) . substr(explode(' ',$ft['full_name'])[1] ?? '',0,1));
+        ?>
+          <div class="sim-test-slide">
+            <div class="sim-test-card">
+              <div class="sim-test-stars">
+                <?= str_repeat('★', (int)$ft['rating']) ?><?php if ((int)$ft['rating'] < 5): ?><span class="off"><?= str_repeat('★', 5 - (int)$ft['rating']) ?></span><?php endif; ?>
+              </div>
+              <p class="sim-test-msg"><?= htmlspecialchars(mb_substr($ft['message'], 0, 180)) ?><?= strlen($ft['message']) > 180 ? '…' : '' ?></p>
+              <div class="sim-test-author">
+                <div class="sim-test-avatar">
+                  <?php if (!empty($ft['profile_picture'])): ?>
+                    <img src="<?= htmlspecialchars($ft['profile_picture']) ?>" alt="" />
+                  <?php else: ?>
+                    <?= $initials ?>
+                  <?php endif; ?>
+                </div>
+                <div>
+                  <div class="sim-test-name"><?= htmlspecialchars($ft['full_name']) ?></div>
+                  <div class="sim-test-course"><?= htmlspecialchars($ft['course']) ?></div>
+                </div>
+              </div>
             </div>
-            <div>
-              <div class="sim-test-name"><?= htmlspecialchars($ft['full_name']) ?></div>
-              <div class="sim-test-course"><?= htmlspecialchars($ft['course']) ?></div>
-            </div>
           </div>
-        </div>
-      <?php endforeach; ?>
+        <?php endforeach; ?>
+      </div>
+      <div class="sim-test-nav" id="testimonialNav"></div>
     </div>
   </div>
 </section>
@@ -389,3 +578,126 @@ require_once __DIR__ . '/includes/navbar.php';
 </section>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<!-- Canvas Confetti -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Testimonial Slideshow Logic
+  const track = document.getElementById('testimonialTrack');
+  const nav = document.getElementById('testimonialNav');
+  
+  if (track && track.children.length > 0) {
+    const slides = Array.from(track.children);
+    const totalSlides = slides.length;
+    let currentIndex = 0;
+    
+    // Determine how many items are visible based on screen width
+    const getVisibleItems = () => {
+      if (window.innerWidth >= 1024) return 3;
+      if (window.innerWidth >= 768) return 2;
+      return 1;
+    };
+    
+    let visibleItems = getVisibleItems();
+    let maxIndex = Math.max(0, totalSlides - visibleItems);
+    
+    // Create dots
+    const createDots = () => {
+      nav.innerHTML = '';
+      if (maxIndex <= 0) return; // No dots needed if all fit in one view
+      
+      for (let i = 0; i <= maxIndex; i++) {
+        const dot = document.createElement('div');
+        dot.classList.add('sim-test-dot');
+        if (i === currentIndex) dot.classList.add('active');
+        dot.addEventListener('click', () => {
+          goToSlide(i);
+          resetInterval();
+        });
+        nav.appendChild(dot);
+      }
+    };
+    
+    const updateDots = () => {
+      const dots = Array.from(nav.children);
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === currentIndex);
+      });
+    };
+    
+    const goToSlide = (index) => {
+      currentIndex = Math.max(0, Math.min(index, maxIndex));
+      const percentage = (currentIndex * 100) / visibleItems;
+      track.style.transform = `translateX(-${percentage}%)`;
+      updateDots();
+    };
+    
+    const nextSlide = () => {
+      if (currentIndex >= maxIndex) {
+        goToSlide(0);
+      } else {
+        goToSlide(currentIndex + 1);
+      }
+    };
+    
+    // Handle resize
+    window.addEventListener('resize', () => {
+      const newVisible = getVisibleItems();
+      if (newVisible !== visibleItems) {
+        visibleItems = newVisible;
+        maxIndex = Math.max(0, totalSlides - visibleItems);
+        currentIndex = Math.min(currentIndex, maxIndex);
+        createDots();
+        goToSlide(currentIndex);
+      }
+    });
+    
+    createDots();
+    
+    // Auto slide
+    let autoSlideInterval = setInterval(nextSlide, 4000);
+    
+    const resetInterval = () => {
+      clearInterval(autoSlideInterval);
+      autoSlideInterval = setInterval(nextSlide, 4000);
+    };
+    
+    // Pause on hover
+    track.parentElement.addEventListener('mouseenter', () => clearInterval(autoSlideInterval));
+    track.parentElement.addEventListener('mouseleave', resetInterval);
+  }
+
+  // Confetti for Top 1 Leaderboard
+  const top1Card = document.querySelector('.sim-lb-podium-1');
+  if (top1Card && typeof confetti === 'function') {
+    const fireConfetti = () => {
+      const rect = top1Card.getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { x, y },
+        colors: ['#fbbf24', '#f59e0b', '#3b82f6', '#ffffff'],
+        disableForReducedMotion: true,
+        zIndex: 100
+      });
+    };
+
+    // Fire on hover
+    top1Card.addEventListener('mouseenter', fireConfetti);
+    
+    // Fire once when scrolled into view
+    let fired = false;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !fired) {
+        fired = true;
+        setTimeout(fireConfetti, 300);
+      }
+    }, { threshold: 0.5 });
+    observer.observe(top1Card);
+  }
+});
+</script>
