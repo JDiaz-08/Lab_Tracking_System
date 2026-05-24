@@ -165,7 +165,7 @@ $labRooms = ['524','526','528','530','542','Mac Laboratory'];
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Sit-in — UC CompLab Admin</title>
-  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../../assets/css/admin.css') ?>"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
   <style>
     .stu-results {

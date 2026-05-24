@@ -15,12 +15,14 @@ if (!isset($base)) $base = '';
       <li><a href="<?= $base ?>pages/about.php">About</a></li>
       <li><a href="<?= $base ?>pages/login.php" class="btn-login">Login</a></li>
     </ul>
-    <button class="lp-dm-toggle" id="lpDmToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-      <i class="bi bi-moon-fill" id="lpDmIcon"></i>
-    </button>
-    <button class="hamburger" id="navHamburger" aria-label="Toggle menu">
-      <span></span><span></span><span></span>
-    </button>
+    <div class="nav-right" style="display: flex; align-items: center; gap: 15px;">
+      <button class="lp-dm-toggle" id="lpDmToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <i class="bi bi-moon-fill" id="lpDmIcon"></i>
+      </button>
+      <button class="hamburger" id="navHamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
   <div class="mobile-menu" id="mobileMenu">
     <a href="<?= $base ?>index.php">Home</a>
@@ -45,16 +47,22 @@ if (!isset($base)) $base = '';
   /* Hamburger */
   var ham = document.getElementById('navHamburger');
   var mob = document.getElementById('mobileMenu');
-  ham && ham.addEventListener('click', function(e) {
-    e.stopPropagation();
-    mob && mob.classList.toggle('open');
-    ham.classList.toggle('open');
-  });
-  document.addEventListener('click', function(e) {
-    if (mob && mob.classList.contains('open') && !mob.contains(e.target) && e.target !== ham) {
-      mob.classList.remove('open');
-      ham && ham.classList.remove('open');
-    }
-  });
+  if (ham && mob) {
+    ham.addEventListener('click', function(e) {
+      ham.classList.toggle('open');
+      if (mob.style.display === 'flex') {
+        mob.style.display = 'none';
+      } else {
+        mob.style.display = 'flex';
+      }
+    });
+    
+    document.addEventListener('click', function(e) {
+      if (!ham.contains(e.target) && !mob.contains(e.target)) {
+        ham.classList.remove('open');
+        mob.style.display = 'none';
+      }
+    });
+  }
 })();
 </script>

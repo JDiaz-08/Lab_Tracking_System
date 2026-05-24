@@ -64,7 +64,7 @@ $featured = count(array_filter($testimonials, fn($t) => $t['is_featured']));
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Testimonials — UC CompLab Admin</title>
-  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../../assets/css/admin.css') ?>"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
   <style>
     .tst-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }

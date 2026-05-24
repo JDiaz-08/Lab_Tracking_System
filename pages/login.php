@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $pageTitle = 'Login';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/navbar.php';
-echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
+echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css?v=' . filemtime(__DIR__ . '/../assets/css/user.css') . '">';
 ?>
 
 <div class="auth-page">

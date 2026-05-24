@@ -337,4 +337,6 @@
   .ep-left { grid-template-columns: 1fr; }
   .ep-form { padding: 1.1rem 1.1rem; }
   .ep-form-card-header { padding: 1.1rem 1.1rem 0.875rem; }
+
+  input, select, textarea, button, .ep-save-btn { min-height: 44px; font-size: 16px !important; }
 }

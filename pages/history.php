@@ -54,8 +54,8 @@ $logs = $sitStmt->fetchAll();
 
 $pageTitle = 'History';
 require_once __DIR__ . '/../includes/header.php';
-echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
-echo '<link rel="stylesheet" href="' . $base . 'assets/css/history.css">';
+echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css?v=' . filemtime(__DIR__ . '/../assets/css/user.css') . '">';
+echo '<link rel="stylesheet" href="' . $base . 'assets/css/history.css?v=' . filemtime(__DIR__ . '/../assets/css/history.css') . '">';
 require_once __DIR__ . '/../includes/user-navbar.php';
 ?>
 

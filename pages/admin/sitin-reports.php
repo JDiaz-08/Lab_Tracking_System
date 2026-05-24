@@ -38,7 +38,7 @@ $avgPerDay = $byDate ? round(array_sum(array_column($byDate,'cnt')) / count($byD
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Sit-in Reports — UC CompLab Admin</title>
-  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../../assets/css/admin.css') ?>"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <style>

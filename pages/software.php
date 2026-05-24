@@ -20,7 +20,7 @@ foreach ($labRooms as $lab) {
 
 $pageTitle = 'Software Availability';
 require_once __DIR__ . '/../includes/header.php';
-echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
+echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css?v=' . filemtime(__DIR__ . '/../assets/css/user.css') . '">';
 ?>
 <style>
 .sw-page-wrap { max-width: 920px; margin: 0 auto; }

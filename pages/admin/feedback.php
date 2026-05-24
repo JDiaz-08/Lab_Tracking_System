@@ -25,7 +25,7 @@ $fiveStar  = (int)$db->query("SELECT COUNT(*) FROM feedback WHERE rating = 5")->
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Feedback — UC CompLab Admin</title>
-  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../../assets/css/admin.css') ?>"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
   <style>
     .fb-stat-grid {
@@ -59,7 +59,7 @@ $fiveStar  = (int)$db->query("SELECT COUNT(*) FROM feedback WHERE rating = 5")->
     .rating-num  { font-size: 0.75rem; font-weight: 700; color: #64748b; }
 
     @media (max-width: 720px) {
-      .fb-stat-grid { grid-template-columns: 1fr 1fr; }
+      .fb-stat-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>

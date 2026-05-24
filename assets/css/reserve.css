@@ -129,4 +129,6 @@
   .res-form-card { padding: 1.35rem 1.1rem; }
   .res-row { grid-template-columns: 1fr; gap: 0.25rem; margin-bottom: 0.65rem; }
   .res-label { font-size: 0.80rem; }
+
+  input, select, textarea, button, .res-btn { min-height: 44px; font-size: 16px !important; }
 }

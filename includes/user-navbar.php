@@ -131,12 +131,14 @@ $_markReadUrl = (isset($base) ? $base : '../')
       <span class="user-name-short"><?= htmlspecialchars($_currentUser['first_name'] ?? '') ?></span>
     </div>
 
-    <button class="dm-toggle" id="userDmToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-      <i class="bi bi-moon-fill" id="userDmIcon"></i>
-    </button>
-    <button class="hamburger user-hamburger" id="userHamburger" aria-label="Toggle menu">
-      <span></span><span></span><span></span>
-    </button>
+    <div class="nav-right" style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
+      <button class="dm-toggle" id="userDmToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <i class="bi bi-moon-fill" id="userDmIcon"></i>
+      </button>
+      <button class="hamburger user-hamburger" id="userHamburger" aria-label="Toggle menu" style="margin-left: 0;">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 
   <div class="user-mobile-menu" id="userMobileMenu">
@@ -183,9 +185,12 @@ $_markReadUrl = (isset($base) ? $base : '../')
   const mob = document.getElementById('userMobileMenu');
   ham?.addEventListener('click', function(e) {
     e.stopPropagation();
-    const isOpen = mob?.classList.contains('open');
-    mob?.classList.toggle('open', !isOpen);
-    ham.classList.toggle('open', !isOpen);
+    ham.classList.toggle('open');
+    if (mob.style.display === 'flex') {
+      mob.style.display = 'none';
+    } else {
+      mob.style.display = 'flex';
+    }
   });
 
   /* ── Notification Dropdown ── */
@@ -206,8 +211,8 @@ $_markReadUrl = (isset($base) ? $base : '../')
       notifDd.classList.remove('open');
     }
     /* Close mobile menu when clicking outside */
-    if (mob?.classList.contains('open') && !mob.contains(e.target) && e.target !== ham) {
-      mob.classList.remove('open');
+    if (mob?.style.display === 'flex' && !mob.contains(e.target) && e.target !== ham) {
+      mob.style.display = 'none';
       ham?.classList.remove('open');
     }
   });

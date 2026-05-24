@@ -6,9 +6,21 @@
 const adminHam  = document.getElementById('adminHamburger');
 const adminMenu = document.getElementById('adminMobileMenu');
 if (adminHam && adminMenu) {
-  adminHam.addEventListener('click', () => {
+  adminHam.addEventListener('click', (e) => {
+    e.stopPropagation();
     adminHam.classList.toggle('open');
-    adminMenu.classList.toggle('open');
+    if (adminMenu.style.display === 'flex') {
+      adminMenu.style.display = 'none';
+    } else {
+      adminMenu.style.display = 'flex';
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (adminMenu.style.display === 'flex' && !adminMenu.contains(e.target) && e.target !== adminHam) {
+      adminMenu.style.display = 'none';
+      adminHam.classList.remove('open');
+    }
   });
 }
 

@@ -94,7 +94,7 @@ $topStudentsAdmin = $db->query("
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Admin Dashboard — UC CompLab</title>
-  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css"/>
+  <link rel="stylesheet" href="<?= $base ?>assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../../assets/css/admin.css') ?>"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <style>
@@ -528,6 +528,6 @@ document.getElementById('editAnnModal')?.addEventListener('click', e => {
   });
 <?php endif; ?>
 </script>
-<script src="<?= $base ?>assets/js/admin.js"></script>
+<script src="<?= $base ?>assets/js/admin.js?v=<?= filemtime(__DIR__ . '/../../assets/js/admin.js') ?>"></script>
 </body>
 </html>

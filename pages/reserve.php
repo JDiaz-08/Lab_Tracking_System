@@ -116,7 +116,7 @@ $sessBadgeClass = $remainingSessions > 10 ? 'sess-ok' : ($remainingSessions > 0 
 
 $pageTitle = 'Reservation';
 require_once __DIR__ . '/../includes/header.php';
-echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css">';
+echo '<link rel="stylesheet" href="' . $base . 'assets/css/user.css?v=' . filemtime(__DIR__ . '/../assets/css/user.css') . '">';
 ?>
 <style>
 /* ── Reserve page ── */
