@@ -58,13 +58,12 @@ require_once __DIR__ . '/includes/navbar.php';
   pointer-events: none;
 }
 .sim-hero-inner {
-  max-width: 1140px; margin: 0 auto; padding: 0 2rem;
-  display: grid; grid-template-columns: 1fr 420px;
-  gap: 4.5rem; align-items: center;
+  max-width: 800px; margin: 0 auto; padding: 0 2rem;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
   position: relative; z-index: 1;
 }
 .sim-eyebrow-tag {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px; justify-content: center;
   font-size: 0.68rem; font-weight: 700; letter-spacing: 2.5px;
   text-transform: uppercase; color: rgba(189,232,245,0.50);
   margin-bottom: 1.25rem;
@@ -76,13 +75,13 @@ require_once __DIR__ . '/includes/navbar.php';
   font-weight: 800; color: #fff; line-height: 1.08;
   letter-spacing: -0.5px; margin-bottom: 1.5rem;
 }
-.sim-hero-h1 .accent { color: var(--light); display: block; }
+.sim-hero-h1 .accent { color: var(--light); display: inline; }
 .sim-hero-p {
   font-size: 0.975rem; color: rgba(255,255,255,0.50);
   line-height: 1.85; font-weight: 300;
-  max-width: 420px; margin-bottom: 2.5rem;
+  max-width: 600px; margin-bottom: 2.5rem;
 }
-.sim-hero-actions { display: flex; gap: 0.875rem; flex-wrap: wrap; }
+.sim-hero-actions { display: flex; gap: 0.875rem; flex-wrap: wrap; justify-content: center; }
 .sim-btn-primary {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 0.875rem 2rem; background: var(--light); color: var(--navy);
@@ -171,8 +170,6 @@ require_once __DIR__ . '/includes/navbar.php';
 .sim-btn-outline:hover { border-color: var(--mid); color: var(--mid); background: rgba(73,136,196,0.04); }
 
 @media (max-width: 960px) {
-  .sim-hero-inner  { grid-template-columns: 1fr; gap: 2.5rem; }
-  .sim-panel       { display: none; }
   .sim-feat-grid   { grid-template-columns: repeat(2,1fr); }
   .sim-steps-grid  { grid-template-columns: repeat(2,1fr); }
   .sim-steps-line  { display: none; }
@@ -256,27 +253,7 @@ require_once __DIR__ . '/includes/navbar.php';
         <a href="pages/about.php" class="sim-btn-ghost">About the System</a>
       </div>
     </div>
-    <div class="sim-panel">
-      <div class="sim-panel-hd">
-        <span class="sim-panel-title">Lab Dashboard</span>
-        <span class="sim-live">Live</span>
-      </div>
-      <div class="sim-stats-3">
-        <div class="sim-sc"><div class="sim-sc-n">42</div><div class="sim-sc-l">Active Now</div></div>
-        <div class="sim-sc"><div class="sim-sc-n">08</div><div class="sim-sc-l">Available</div></div>
-        <div class="sim-sc"><div class="sim-sc-n">03</div><div class="sim-sc-l">Pending</div></div>
-      </div>
-      <div class="sim-rows">
-        <div class="sim-row"><span class="sim-dot on"></span><span class="sim-row-name">Lab Room 524 — Sit-in</span><span class="sim-row-time">2h 15m</span></div>
-        <div class="sim-row"><span class="sim-dot on"></span><span class="sim-row-name">Lab Room 526 — Class</span><span class="sim-row-time">1h 40m</span></div>
-        <div class="sim-row"><span class="sim-dot idle"></span><span class="sim-row-name">Lab Room 528 — Idle</span><span class="sim-row-time">0h 05m</span></div>
-        <div class="sim-row"><span class="sim-dot off"></span><span class="sim-row-name">Lab Room 530 — Vacant</span><span class="sim-row-time">—</span></div>
-      </div>
-      <div class="sim-panel-ft">
-        <span class="sim-uptime">Uptime <strong>98.4%</strong></span>
-        <span style="font-size:0.68rem;color:rgba(189,232,245,0.28);"><?= date('g:i A') ?></span>
-      </div>
-    </div>
+
   </div>
 </section>
 
