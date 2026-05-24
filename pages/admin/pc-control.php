@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'bulk_status') {
         $lab = trim($_POST['lab_room'] ?? '');
         $newSt = trim($_POST['new_status'] ?? '');
-        if (in_array($lab, $labRooms) && in_array($newSt, ['available', 'unavailable', 'maintenance'])) {
+        if (in_array($lab, $labRooms) && in_array($newSt, ['available', 'unavailable', 'maintenance', 'occupied'])) {
             if ($newSt === 'available') {
                 // Set all maintenance PCs in this lab to available
                 $db->prepare("
@@ -83,6 +83,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
                 $flash = "All available PCs in Lab $lab have been set to Maintenance, and all pending/approved reservations for this lab have been rejected.";
+            } elseif ($newSt === 'occupied') {
+                // Set all available PCs in this lab to occupied
+                $db->prepare("
+                    UPDATE pcs 
+                    SET status = 'occupied' 
+                    WHERE lab_room = ? AND status = 'available'
+                ")->execute([$lab]);
+                $flash = "All available PCs in Lab $lab have been set to Occupied.";
             }
         }
     }
@@ -95,24 +103,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pcInfo->execute([$pcId]);
             $pc = $pcInfo->fetch();
 
-            if ($pc && $pc['status'] === 'occupied' && $pc['occupied_by']) {
-                // End the sit-in session
-                $db->prepare("
-                    UPDATE sit_in_logs SET logout_time = ?, status = 'done'
-                    WHERE user_id = ? AND logout_time IS NULL AND lab_room = ?
-                ")->execute([date('Y-m-d H:i:s'), $pc['occupied_by'], $pc['lab_room']]);
+            if ($pc && $pc['status'] === 'occupied') {
+                if ($pc['occupied_by']) {
+                    // End the sit-in session
+                    $db->prepare("
+                        UPDATE sit_in_logs SET logout_time = ?, status = 'done'
+                        WHERE user_id = ? AND logout_time IS NULL AND lab_room = ?
+                    ")->execute([date('Y-m-d H:i:s'), $pc['occupied_by'], $pc['lab_room']]);
 
-                // Deduct session
-                $db->prepare("UPDATE users SET remaining_sessions = MAX(0, remaining_sessions - 1) WHERE id = ?")->execute([$pc['occupied_by']]);
+                    // Deduct session
+                    $db->prepare("UPDATE users SET remaining_sessions = MAX(0, remaining_sessions - 1) WHERE id = ?")->execute([$pc['occupied_by']]);
+
+                    // Notify student
+                    $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
+                        $pc['occupied_by'],
+                        "Your sit-in session on PC-" . str_pad($pc['pc_number'],2,'0',STR_PAD_LEFT) . " in Lab {$pc['lab_room']} has been ended by the administrator."
+                    ]);
+                }
 
                 // Release PC
                 $db->prepare("UPDATE pcs SET status = 'available', occupied_by = NULL WHERE id = ?")->execute([$pcId]);
-
-                // Notify student
-                $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([
-                    $pc['occupied_by'],
-                    "Your sit-in session on PC-" . str_pad($pc['pc_number'],2,'0',STR_PAD_LEFT) . " in Lab {$pc['lab_room']} has been ended by the administrator."
-                ]);
 
                 $flash = "Session ended and PC released.";
             } else {
@@ -315,6 +325,15 @@ foreach ($labRooms as $lab) {
                   <i class="bi bi-tools"></i> Set All Maintenance
                 </button>
               </form>
+
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Set all currently available PCs in Lab <?= htmlspecialchars($lab) ?> to Occupied?')">
+                <input type="hidden" name="action" value="bulk_status">
+                <input type="hidden" name="lab_room" value="<?= htmlspecialchars($lab) ?>">
+                <input type="hidden" name="new_status" value="occupied">
+                <button type="submit" class="a-btn a-btn-sm a-btn-red" style="background: #dc2626; color: white; border-color: #dc2626;">
+                  <i class="bi bi-person-fill"></i> Set All Occupied
+                </button>
+              </form>
             </div>
 
             <div class="pc-grid-admin">
@@ -353,13 +372,24 @@ foreach ($labRooms as $lab) {
                         </button>
                       </form>
                     <?php elseif ($pc['status'] === 'occupied'): ?>
-                      <form method="POST" style="display:inline;" onsubmit="return confirm('End this session and release PC-<?= $num ?>?')">
-                        <input type="hidden" name="action" value="force_release">
-                        <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
-                        <button type="submit" class="pc-act-btn pc-act-release" title="Force Release">
-                          <i class="bi bi-door-open"></i> Release
-                        </button>
-                      </form>
+                      <?php if (!empty($pc['occupied_by'])): ?>
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('End this session and release PC-<?= $num ?>?')">
+                          <input type="hidden" name="action" value="force_release">
+                          <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
+                          <button type="submit" class="pc-act-btn pc-act-release" title="Force Release">
+                            <i class="bi bi-door-open"></i> Release
+                          </button>
+                        </form>
+                      <?php else: ?>
+                        <form method="POST" style="display:inline;">
+                          <input type="hidden" name="action" value="toggle_pc">
+                          <input type="hidden" name="pc_id" value="<?= $pc['id'] ?>">
+                          <input type="hidden" name="new_status" value="available">
+                          <button type="submit" class="pc-act-btn pc-act-toggle" title="Enable">
+                            <i class="bi bi-check-circle"></i> Enable
+                          </button>
+                        </form>
+                      <?php endif; ?>
                     <?php endif; ?>
                   </div>
                 </div>
