@@ -17,32 +17,54 @@ $_SESSION['user'] = $user;
 $errors     = [];
 $resSuccess = '';
 
+if (isset($_SESSION['flash_success'])) {
+    $resSuccess = $_SESSION['flash_success'];
+    unset($_SESSION['flash_success']);
+}
+if (isset($_SESSION['flash_errors'])) {
+    $errors = $_SESSION['flash_errors'];
+    unset($_SESSION['flash_errors']);
+}
+$preserved = [];
+if (isset($_SESSION['preserve_post'])) {
+    $preserved = $_SESSION['preserve_post'];
+    unset($_SESSION['preserve_post']);
+}
+
 $purposes = ['C# Programming','Java Programming','PHP Programming','C Programming','ASP.net Programming'];
 $labRooms = ['524','526','528','530','542','Mac Laboratory'];
 
 $remainingSessions = (int)($user['remaining_sessions'] ?? 30);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reserve') {
-    $purpose  = trim($_POST['purpose_res'] ?? '');
-    $labRoom  = trim($_POST['lab_room_res'] ?? '');
-    $timeIn   = trim($_POST['time_in'] ?? '');
-    $date     = trim($_POST['date'] ?? '');
-    $pcNumber = (int)($_POST['pc_number'] ?? 0);
-    if (!$purpose || !$labRoom || !$timeIn || !$date) {
-        $errors[] = 'All reservation fields are required.';
-    } elseif (strtotime($date) < strtotime('today')) {
-        $errors[] = 'Reservation date cannot be in the past.';
-    } elseif ($pcNumber < 1 || $pcNumber > 49) {
-        $errors[] = 'Please select a PC from the grid.';
-    } else {
-        $db->prepare("INSERT INTO reservations (user_id, lab_room, date, time_slot, purpose, pc_number) VALUES (?, ?, ?, ?, ?, ?)")->execute([$uid, $labRoom, $date, $timeIn, $purpose, $pcNumber]);
-        $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([$uid, "Reservation for Lab {$labRoom} (PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT).") on " . date('F j, Y', strtotime($date)) . " at {$timeIn} submitted."]);
-        $resSuccess = "Reservation submitted for Lab {$labRoom}, PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT)." on " . date('F j, Y', strtotime($date)) . ". You will be notified once approved.";
-    }
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $action = $_POST['action'];
+    if ($action === 'reserve') {
+        $purpose  = trim($_POST['purpose_res'] ?? '');
+        $labRoom  = trim($_POST['lab_room_res'] ?? '');
+        $timeIn   = trim($_POST['time_in'] ?? '');
+        $date     = trim($_POST['date'] ?? '');
+        $pcNumber = (int)($_POST['pc_number'] ?? 0);
+        if (!$purpose || !$labRoom || !$timeIn || !$date) {
+            $errors[] = 'All reservation fields are required.';
+        } elseif (strtotime($date) < strtotime('today')) {
+            $errors[] = 'Reservation date cannot be in the past.';
+        } elseif ($pcNumber < 1 || $pcNumber > 49) {
+            $errors[] = 'Please select a PC from the grid.';
+        } else {
+            $db->prepare("INSERT INTO reservations (user_id, lab_room, date, time_slot, purpose, pc_number) VALUES (?, ?, ?, ?, ?, ?)")->execute([$uid, $labRoom, $date, $timeIn, $purpose, $pcNumber]);
+            $db->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)")->execute([$uid, "Reservation for Lab {$labRoom} (PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT).") on " . date('F j, Y', strtotime($date)) . " at {$timeIn} submitted."]);
+            $_SESSION['flash_success'] = "Reservation submitted for Lab {$labRoom}, PC-".str_pad($pcNumber,2,'0',STR_PAD_LEFT)." on " . date('F j, Y', strtotime($date)) . ". You will be notified once approved.";
+            header('Location: reserve.php');
+            exit;
+        }
+        if (!empty($errors)) {
+            $_SESSION['flash_errors'] = $errors;
+            $_SESSION['preserve_post'] = $_POST;
+            header('Location: reserve.php');
+            exit;
+        }
+    }
 
     if ($action === 'disable_reservation') {
         $resId = (int)($_POST['reservation_id'] ?? 0);
@@ -52,10 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($res && ($res['disabled_by_student'] ?? 0) == 0) {
             $db->prepare("UPDATE reservations SET disabled_by_student = 1 WHERE id = ?")->execute([$resId]);
-            $resSuccess = "Reservation disabled successfully. Admin will not see this reservation while disabled.";
+            $_SESSION['flash_success'] = "Reservation disabled successfully. Admin will not see this reservation while disabled.";
         } else {
-            $errors[] = "Reservation cannot be disabled.";
+            $_SESSION['flash_errors'] = ["Reservation cannot be disabled."];
         }
+        header('Location: reserve.php');
+        exit;
     }
 
     if ($action === 'enable_reservation') {
@@ -71,13 +95,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if ($pc && $pc['status'] === 'available') {
                 $db->prepare("UPDATE reservations SET disabled_by_student = 0 WHERE id = ?")->execute([$resId]);
-                $resSuccess = "Reservation enabled successfully and is now visible to the admin.";
+                $_SESSION['flash_success'] = "Reservation enabled successfully and is now visible to the admin.";
             } else {
-                $errors[] = "The PC is no longer available. Please book a new PC.";
+                $_SESSION['flash_errors'] = ["The PC is no longer available. Please book a new PC."];
             }
         } else {
-            $errors[] = "Reservation cannot be enabled.";
+            $_SESSION['flash_errors'] = ["Reservation cannot be enabled."];
         }
+        header('Location: reserve.php');
+        exit;
     }
 }
 
@@ -456,13 +482,13 @@ html.dark .res-log-reason { background: rgba(239,68,68,0.10); border-color: rgba
                   <label>Preferred Date</label>
                   <input type="date" name="date" class="res-input"
                          min="<?= date('Y-m-d') ?>"
-                         value="<?= htmlspecialchars($_POST['date'] ?? '') ?>"
+                         value="<?= htmlspecialchars($_POST['date'] ?? $preserved['date'] ?? '') ?>"
                          required />
                 </div>
                 <div class="res-field">
                   <label>Preferred Time</label>
                   <input type="time" name="time_in" class="res-input"
-                         value="<?= htmlspecialchars($_POST['time_in'] ?? '') ?>"
+                         value="<?= htmlspecialchars($_POST['time_in'] ?? $preserved['time_in'] ?? '') ?>"
                          required />
                 </div>
               </div>
@@ -472,7 +498,7 @@ html.dark .res-log-reason { background: rgba(239,68,68,0.10); border-color: rgba
                   <select name="purpose_res" class="res-input res-select" required>
                     <option value="" disabled selected>— Select Purpose —</option>
                     <?php foreach ($purposes as $p): ?>
-                      <option value="<?= htmlspecialchars($p) ?>" <?= (($_POST['purpose_res'] ?? '') === $p) ? 'selected' : '' ?>>
+                      <option value="<?= htmlspecialchars($p) ?>" <?= (($_POST['purpose_res'] ?? $preserved['purpose_res'] ?? '') === $p) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($p) ?>
                       </option>
                     <?php endforeach; ?>
@@ -483,7 +509,7 @@ html.dark .res-log-reason { background: rgba(239,68,68,0.10); border-color: rgba
                   <select name="lab_room_res" id="labSelect" class="res-input res-select" required>
                     <option value="" disabled selected>— Select Lab —</option>
                     <?php foreach ($labRooms as $lab): ?>
-                      <option value="<?= htmlspecialchars($lab) ?>" <?= (($_POST['lab_room_res'] ?? '') === $lab) ? 'selected' : '' ?>>
+                      <option value="<?= htmlspecialchars($lab) ?>" <?= (($_POST['lab_room_res'] ?? $preserved['lab_room_res'] ?? '') === $lab) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($lab) ?>
                       </option>
                     <?php endforeach; ?>
@@ -628,15 +654,19 @@ const pcContainer   = document.getElementById('pcGridContainer');
 const pcInput       = document.getElementById('selectedPcNumber');
 const pcLabel       = document.getElementById('pcSelectedLabel');
 const pcLabelText   = document.getElementById('pcSelectedText');
-let selectedPc      = 0;
+let selectedPc      = <?= (int)($_POST['pc_number'] ?? $preserved['pc_number'] ?? 0) ?>;
+let autoPopulating  = false;
 
 labSelect.addEventListener('change', function() {
   const lab = this.value;
   if (!lab) return;
   pcContainer.innerHTML = '<div class="pc-grid-empty"><i class="bi bi-arrow-repeat"></i> Loading PCs...</div>';
-  selectedPc = 0;
-  pcInput.value = '';
-  pcLabel.classList.remove('show');
+  
+  if (!autoPopulating) {
+    selectedPc = 0;
+    pcInput.value = '';
+    pcLabel.classList.remove('show');
+  }
 
   fetch('<?= $base ?>pages/api/pc-status.php?lab=' + encodeURIComponent(lab))
     .then(r => r.json())
@@ -665,6 +695,9 @@ labSelect.addEventListener('change', function() {
       });
       grid += '</div>';
       pcContainer.innerHTML = grid;
+      if (selectedPc) {
+        selectPc(selectedPc);
+      }
     })
     .catch(() => {
       pcContainer.innerHTML = '<div class="pc-grid-empty"><i class="bi bi-exclamation-triangle"></i> Failed to load PCs.</div>';
@@ -698,6 +731,12 @@ function selectPc(num) {
   if (cell) cell.classList.add('pc-selected');
   pcLabelText.textContent = 'PC-' + String(num).padStart(2, '0') + ' selected';
   pcLabel.classList.add('show');
+}
+
+if (labSelect.value) {
+  autoPopulating = true;
+  labSelect.dispatchEvent(new Event('change'));
+  autoPopulating = false;
 }
 
 document.getElementById('reserveForm').addEventListener('submit', function(e) {
