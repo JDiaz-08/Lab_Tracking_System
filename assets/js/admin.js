@@ -341,7 +341,7 @@ async function exportTableToPDF(tableId, title = 'Report', filename = 'report.pd
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(26, 58, 107); // --a-navy (#1a3a6b)
-    doc.text("UCMAIN", centerX, 32, { align: 'center' });
+    doc.text("University of Cebu Main Campus", centerX, 32, { align: 'center' });
 
     // Title Line 2: Subtitle / Report Type
     const displayTitle = title.includes('—') ? title.split('—')[1].trim() : title;
